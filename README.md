@@ -1,8 +1,31 @@
 # CommunityAI Platform
 
-CommunityAI is an AI-assisted community management platform built as a realistic MVP for a two-month internship. The current setup is a clean foundation for the future features, not the full product.
+CommunityAI is an AI-assisted community management platform built as a realistic MVP for a two-month internship.
 
-## Current architecture
+## Current scope
+
+Implemented now:
+
+- Project foundation (FastAPI + React + PostgreSQL + Redis + Docker Compose)
+- Authentication with email/password
+- JWT access token
+- Refresh token flow with server-side revocation
+- Protected route `/api/v1/auth/me`
+- Basic RBAC checks
+
+Not implemented yet:
+
+- MFA, WebAuthn, SSO
+- Social OAuth providers (Google, Microsoft, Meta, LinkedIn)
+- Social publishing, calendar, inbox, analytics, AI assistant business features
+
+## Canonical frontend
+
+Canonical frontend path is [frontend/communityai](frontend/communityai).
+
+The root [communityai](communityai) folder is kept temporarily as an old duplicate and is not used as the active frontend.
+
+## Architecture
 
 - Frontend: [frontend/communityai](frontend/communityai)
 - Backend: [backend](backend)
@@ -10,19 +33,11 @@ CommunityAI is an AI-assisted community management platform built as a realistic
 - Cache: Redis
 - Orchestration: Docker Compose
 
-The duplicate [communityai](communityai) folder at the repository root is kept for now and is not used as the canonical frontend.
+## Environment configuration
 
-## Prerequisites
+Create `.env` at repository root from [.env.example](.env.example).
 
-- Docker and Docker Compose
-- Python 3.11+ for local backend runs
-- Node.js 20+ for local frontend runs
-
-## Environment
-
-Create a local `.env` file at the repository root from [.env.example](.env.example).
-
-Required variables:
+Core variables:
 
 - `POSTGRES_DB`
 - `POSTGRES_USER`
@@ -30,10 +45,42 @@ Required variables:
 - `POSTGRES_HOST`
 - `POSTGRES_PORT`
 - `BACKEND_CORS_ORIGINS`
+- `JWT_SECRET_KEY`
+- `JWT_ALGORITHM`
+- `ACCESS_TOKEN_EXPIRE_MINUTES`
+- `REFRESH_TOKEN_EXPIRE_DAYS`
+- `REFRESH_COOKIE_NAME`
+- `REFRESH_COOKIE_SECURE`
+- `REFRESH_COOKIE_SAMESITE`
+- `REFRESH_COOKIE_PATH`
 
 Never commit a real `.env` file.
 
-## Installation
+## Authentication strategy
+
+- Access token: short lifetime JWT used for API authorization.
+- Refresh token: longer lifetime JWT stored in `HttpOnly` cookie.
+- Backend stores only a SHA-256 hash of refresh tokens in database.
+- Logout flow revokes refresh token server-side and clears cookie.
+- After logout, old refresh token cannot issue a new access token.
+
+Current frontend compromise for MVP:
+
+- Access token is kept in in-memory React state (not persisted in localStorage).
+- Refresh token is primarily handled through cookie-based flow.
+
+## API endpoints
+
+Auth routes under `/api/v1/auth`:
+
+- `POST /register`
+- `POST /login`
+- `POST /refresh`
+- `GET /me`
+- `POST /logout`
+- `GET /admin-check` (RBAC validation endpoint)
+
+## Install and run
 
 Backend dependencies:
 
@@ -49,79 +96,38 @@ cd frontend/communityai
 npm install
 ```
 
-## Run with Docker Compose
-
-From the repository root:
+Docker Compose:
 
 ```powershell
 docker compose up --build
 ```
 
-Services:
-
-- Frontend: http://localhost:5173
-- Backend: http://localhost:8000
-- Swagger: http://localhost:8000/docs
-- Health check: http://localhost:8000/health
-
-## Manual backend run
+Manual backend:
 
 ```powershell
 cd backend
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-## Manual frontend run
+Manual frontend:
 
 ```powershell
 cd frontend/communityai
 npm run dev -- --host 0.0.0.0 --port 5173
 ```
 
-## Validation endpoints
+## Useful URLs
 
-- Root API: http://localhost:8000/
-- Health: http://localhost:8000/health
-- OpenAPI docs: http://localhost:8000/docs
 - Frontend: http://localhost:5173
-# CommunityAI Platform
+- Backend: http://localhost:8000
+- Swagger: http://localhost:8000/docs
+- Health check: http://localhost:8000/health
 
-CommunityAI is an AI-powered Social Media Management Platform designed to help community managers centralize, automate, and optimize their daily workflows.
+## Validation commands
 
-## Features
-
-- Secure authentication (JWT + RBAC)
-- Multi-account social media management
-- Content publishing and editorial calendar
-- AI-powered content generation
-- Unified inbox
-- Analytics dashboard
-- Automated reporting
-
-## Tech Stack
-
-### Frontend
-- React 18
-- TypeScript
-- Tailwind CSS
-- shadcn/ui
-- TanStack Query
-
-### Backend
-- FastAPI
-- Python 3.11
-- SQLAlchemy
-- PostgreSQL
-- Redis
-- Celery
-
-### AI
-- OpenAI GPT-4o
-- LangChain
-
-### Infrastructure
-- Docker
-- Nginx
-- MinIO
-
-## Project Structure
+```powershell
+python -m compileall backend/app
+cd backend; pytest
+cd ../frontend/communityai; npm run build
+cd ../..; docker compose config
+```

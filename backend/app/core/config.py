@@ -27,6 +27,21 @@ class Settings(BaseSettings):
     postgres_host: str = Field(default="postgres", alias="POSTGRES_HOST")
     postgres_port: int = Field(default=5432, alias="POSTGRES_PORT")
 
+    jwt_secret_key: str = Field(default="change-me-in-dev", alias="JWT_SECRET_KEY")
+    jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
+    access_token_expire_minutes: int = Field(
+        default=30,
+        alias="ACCESS_TOKEN_EXPIRE_MINUTES",
+    )
+    refresh_token_expire_days: int = Field(
+        default=7,
+        alias="REFRESH_TOKEN_EXPIRE_DAYS",
+    )
+    refresh_cookie_name: str = Field(default="refresh_token", alias="REFRESH_COOKIE_NAME")
+    refresh_cookie_secure: bool = Field(default=False, alias="REFRESH_COOKIE_SECURE")
+    refresh_cookie_samesite: str = Field(default="lax", alias="REFRESH_COOKIE_SAMESITE")
+    refresh_cookie_path: str = Field(default="/api/v1/auth", alias="REFRESH_COOKIE_PATH")
+
     @property
     def cors_origins(self) -> list[str]:
         return [
