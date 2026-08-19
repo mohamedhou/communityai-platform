@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from typing import Any
@@ -30,10 +31,12 @@ def _build_token(payload: dict[str, Any], expires_delta: timedelta) -> str:
     now = datetime.now(UTC)
     token_payload = {
         **payload,
+        "jti": str(uuid.uuid4()),
         "iat": int(now.timestamp()),
         "exp": int((now + expires_delta).timestamp()),
     }
     return jwt.encode(token_payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+
 
 
 def create_access_token(user_id: int, role: UserRole) -> str:
