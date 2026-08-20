@@ -32,6 +32,12 @@ export function Navbar() {
           >
             Profile
           </NavLink>
+          <NavLink
+            to="/social-accounts"
+            className={({ isActive }) => `navbar-link ${isActive ? 'active' : ''}`}
+          >
+            Social Accounts
+          </NavLink>
           {user?.role === 'ADMIN' && (
             <NavLink
               to="/admin/users"

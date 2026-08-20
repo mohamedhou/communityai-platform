@@ -1,4 +1,6 @@
 from app.models.refresh_token import RefreshToken
 from app.models.user import User, UserRole
+from app.social.models import SocialAccount, SocialAccountStatus, OAuthState
 
-__all__ = ["User", "UserRole", "RefreshToken"]
+__all__ = ["User", "UserRole", "RefreshToken", "SocialAccount", "SocialAccountStatus", "OAuthState"]
+

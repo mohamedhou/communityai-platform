@@ -42,6 +42,21 @@ class Settings(BaseSettings):
     refresh_cookie_samesite: str = Field(default="lax", alias="REFRESH_COOKIE_SAMESITE")
     refresh_cookie_path: str = Field(default="/api/v1/auth", alias="REFRESH_COOKIE_PATH")
 
+    meta_client_id: str | None = Field(default=None, alias="META_CLIENT_ID")
+    meta_client_secret: str | None = Field(default=None, alias="META_CLIENT_SECRET")
+    meta_redirect_uri: str | None = Field(default=None, alias="META_REDIRECT_URI")
+
+    linkedin_client_id: str | None = Field(default=None, alias="LINKEDIN_CLIENT_ID")
+    linkedin_client_secret: str | None = Field(default=None, alias="LINKEDIN_CLIENT_SECRET")
+    linkedin_redirect_uri: str | None = Field(default=None, alias="LINKEDIN_REDIRECT_URI")
+
+    social_token_encryption_key: str | None = Field(default=None, alias="SOCIAL_TOKEN_ENCRYPTION_KEY")
+    social_mock_mode: bool = Field(default=False, alias="SOCIAL_MOCK_MODE")
+
+    redis_host: str = Field(default="redis", alias="REDIS_HOST")
+    redis_port: int = Field(default=6379, alias="REDIS_PORT")
+
+
     @property
     def cors_origins(self) -> list[str]:
         return [

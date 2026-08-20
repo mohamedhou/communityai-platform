@@ -13,7 +13,7 @@ if str(BASE_DIR) not in sys.path:
 
 from app.core.config import get_settings
 from app.database.base import Base
-from app.models import RefreshToken, User
+from app.models import RefreshToken, User, SocialAccount, OAuthState
 
 config = context.config
 

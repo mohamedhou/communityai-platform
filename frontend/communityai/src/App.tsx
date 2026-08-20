@@ -8,6 +8,8 @@ import { HomePage } from './pages/HomePage'
 import { Navbar } from './components/Navbar'
 import { ProfilePage } from './features/users/pages/ProfilePage'
 import { UserManagementPage } from './features/users/pages/UserManagementPage'
+import { SocialAccountsPage } from './features/social-accounts/pages/SocialAccountsPage'
+
 
 function ProtectedLayout() {
   const { accessToken, isBootstrapping } = useAuth()
@@ -51,6 +53,7 @@ function App() {
       <Route element={<ProtectedLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/social-accounts" element={<SocialAccountsPage />} />
         <Route
           path="/admin/users"
           element={
