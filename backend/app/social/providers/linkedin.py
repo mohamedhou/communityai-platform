@@ -7,11 +7,11 @@ import urllib.parse
 import httpx
 
 from app.core.config import get_settings
-from app.social.base import SocialProvider, SocialProfileInfo
+from app.social.base import SocialProvider, SocialProfileInfo, SocialPublishingProvider
 from app.social.exceptions import SocialProviderError
 
 
-class LinkedInProvider(SocialProvider):
+class LinkedInProvider(SocialProvider, SocialPublishingProvider):
     def get_authorization_url(self, state: str) -> str:
         settings = get_settings()
         if settings.social_mock_mode:
@@ -188,3 +188,64 @@ class LinkedInProvider(SocialProvider):
                 client.post(url, data=data)
         except Exception as exc:
             raise SocialProviderError(f"Failed to revoke LinkedIn access: {exc}") from exc
+
+    def publish_post(
+        self,
+        content: str,
+        access_token: str,
+        external_account_id: str,
+        media_url: str | None = None
+    ) -> str:
+        settings = get_settings()
+        if settings.social_mock_mode:
+            return "mock-linkedin-post-id"
+
+        url = "https://api.linkedin.com/v2/ugcPosts"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "X-Restli-Protocol-Version": "2.0.0",
+            "Content-Type": "application/json",
+        }
+
+        # Build author URN
+        author_urn = f"urn:li:person:{external_account_id}"
+
+        # Build share content
+        share_content = {
+            "shareCommentary": {
+                "text": content
+            },
+            "shareMediaCategory": "NONE"
+        }
+
+        if media_url:
+            share_content["shareMediaCategory"] = "ARTICLE"
+            share_content["media"] = [
+                {
+                    "status": "READY",
+                    "originalUrl": media_url
+                }
+            ]
+
+        payload = {
+            "author": author_urn,
+            "lifecycleState": "PUBLISHED",
+            "specificContent": {
+                "com.linkedin.ugc.ShareContent": share_content
+            },
+            "visibility": {
+                "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+            }
+        }
+
+        try:
+            with httpx.Client() as client:
+                res = client.post(url, headers=headers, json=payload)
+                if res.status_code not in (200, 201):
+                    raise SocialProviderError(f"LinkedIn publishing failed: {res.text}")
+                data = res.json()
+                return data.get("id") or "linkedin-post-id"
+        except Exception as exc:
+            if isinstance(exc, SocialProviderError):
+                raise
+            raise SocialProviderError(f"HTTP error during LinkedIn publishing: {exc}") from exc

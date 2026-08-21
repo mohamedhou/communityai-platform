@@ -54,3 +54,16 @@ class SocialProvider(ABC):
     def revoke_access(self, access_token: str) -> None:
         """Revoke the access token on the provider side."""
         pass
+
+
+class SocialPublishingProvider(ABC):
+    @abstractmethod
+    def publish_post(
+        self,
+        content: str,
+        access_token: str,
+        external_account_id: str,
+        media_url: str | None = None
+    ) -> str:
+        """Publish a post to the platform and return the external post ID."""
+        pass
