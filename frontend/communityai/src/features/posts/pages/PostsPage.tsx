@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/hooks/useAuth'
 import * as postApi from '../services/postApi'
 import { getSocialAccounts } from '../../social-accounts/services/socialApi'
-import { PostStatus } from '../types/post'
+import type { PostStatus } from '../types/post'
 
 export function PostsPage() {
   const { accessToken } = useAuth()

@@ -4,18 +4,29 @@ import type { ReactElement } from 'react'
 import { LoginPage } from './features/auth/pages/LoginPage'
 import { RegisterPage } from './features/auth/pages/RegisterPage'
 import { useAuth } from './features/auth/hooks/useAuth'
+
 import { HomePage } from './pages/HomePage'
+
 import { Navbar } from './components/Navbar'
+
 import { ProfilePage } from './features/users/pages/ProfilePage'
 import { UserManagementPage } from './features/users/pages/UserManagementPage'
+
 import { SocialAccountsPage } from './features/social-accounts/pages/SocialAccountsPage'
+
+import { PostsPage } from './features/posts/pages/PostsPage'
+import { CreatePostPage } from './features/posts/pages/CreatePostPage'
 
 
 function ProtectedLayout() {
   const { accessToken, isBootstrapping } = useAuth()
 
   if (isBootstrapping) {
-    return <div className="auth-loading">Checking session...</div>
+    return (
+      <div className="auth-loading">
+        Checking session...
+      </div>
+    )
   }
 
   if (!accessToken) {
@@ -30,11 +41,20 @@ function ProtectedLayout() {
   )
 }
 
-function AdminRoute({ children }: { children: ReactElement }) {
+
+function AdminRoute({
+  children,
+}: {
+  children: ReactElement
+}) {
   const { user, isBootstrapping } = useAuth()
 
   if (isBootstrapping) {
-    return <div className="auth-loading">Checking session...</div>
+    return (
+      <div className="auth-loading">
+        Checking session...
+      </div>
+    )
   }
 
   if (!user || user.role !== 'ADMIN') {
@@ -44,16 +64,55 @@ function AdminRoute({ children }: { children: ReactElement }) {
   return children
 }
 
+
 function App() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      
+      {/* Public routes */}
+      <Route
+        path="/login"
+        element={<LoginPage />}
+      />
+
+      <Route
+        path="/register"
+        element={<RegisterPage />}
+      />
+
+      {/* Protected routes */}
       <Route element={<ProtectedLayout />}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/social-accounts" element={<SocialAccountsPage />} />
+        <Route
+          path="/"
+          element={<HomePage />}
+        />
+
+        <Route
+          path="/profile"
+          element={<ProfilePage />}
+        />
+
+        <Route
+          path="/social-accounts"
+          element={<SocialAccountsPage />}
+        />
+
+        {/* Posts */}
+        <Route
+          path="/posts"
+          element={<PostsPage />}
+        />
+
+        <Route
+          path="/posts/new"
+          element={<CreatePostPage />}
+        />
+
+        <Route
+          path="/posts/:postId/edit"
+          element={<CreatePostPage />}
+        />
+
+        {/* Admin */}
         <Route
           path="/admin/users"
           element={
@@ -64,8 +123,13 @@ function App() {
         />
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* Fallback */}
+      <Route
+        path="*"
+        element={<Navigate to="/" replace />}
+      />
     </Routes>
+
   )
 }
 

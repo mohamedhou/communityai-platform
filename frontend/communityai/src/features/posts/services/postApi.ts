@@ -1,6 +1,7 @@
-import { Post, PostStatus } from '../types/post';
+import { API_BASE_URL } from '../../../lib/env';
+import type { Post, PostStatus } from '../types/post';
 
-const API_BASE = '/api/v1/posts';
+const API_BASE = `${API_BASE_URL}/api/v1/posts`;
 
 export async function getPosts(token: string, status?: PostStatus): Promise<Post[]> {
   const url = status ? `${API_BASE}?status_filter=${status}` : API_BASE;

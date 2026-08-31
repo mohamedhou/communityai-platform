@@ -21,27 +21,47 @@ export function Navbar() {
         <nav className="navbar-links">
           <NavLink
             to="/"
-            className={({ isActive }) => `navbar-link ${isActive ? 'active' : ''}`}
+            className={({ isActive }) =>
+              `navbar-link ${isActive ? 'active' : ''}`
+            }
             end
           >
             Home
           </NavLink>
+
           <NavLink
             to="/profile"
-            className={({ isActive }) => `navbar-link ${isActive ? 'active' : ''}`}
+            className={({ isActive }) =>
+              `navbar-link ${isActive ? 'active' : ''}`
+            }
           >
             Profile
           </NavLink>
+
           <NavLink
             to="/social-accounts"
-            className={({ isActive }) => `navbar-link ${isActive ? 'active' : ''}`}
+            className={({ isActive }) =>
+              `navbar-link ${isActive ? 'active' : ''}`
+            }
           >
             Social Accounts
           </NavLink>
+
+          <NavLink
+            to="/posts"
+            className={({ isActive }) =>
+              `navbar-link ${isActive ? 'active' : ''}`
+            }
+          >
+            Posts
+          </NavLink>
+
           {user?.role === 'ADMIN' && (
             <NavLink
               to="/admin/users"
-              className={({ isActive }) => `navbar-link ${isActive ? 'active' : ''}`}
+              className={({ isActive }) =>
+                `navbar-link ${isActive ? 'active' : ''}`
+              }
             >
               User Management
             </NavLink>
@@ -54,7 +74,12 @@ export function Navbar() {
               {user.first_name} {user.last_name} ({user.role})
             </span>
           )}
-          <button type="button" onClick={handleLogout} className="navbar-logout-btn">
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="navbar-logout-btn"
+          >
             Logout
           </button>
         </div>

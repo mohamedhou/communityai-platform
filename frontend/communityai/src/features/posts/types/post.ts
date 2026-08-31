@@ -14,3 +14,18 @@ export interface Post {
   created_at: string;
   updated_at: string;
 }
+export interface CreatePostPayload {
+  social_account_id: number
+  content: string
+  media_url?: string | null
+}
+
+export interface UpdatePostPayload {
+  content?: string
+  media_url?: string | null
+  social_account_id?: number
+}
+
+export interface SchedulePostPayload {
+  scheduled_at: string
+}
