@@ -111,6 +111,10 @@ class PostService:
         post = self.get_post_by_id(user_id, post_id)
         self._validate_transition(post.status, PostStatus.SCHEDULED)
 
+        # Ensure scheduled time is timezone aware in UTC
+        if scheduled_at.tzinfo is None:
+            scheduled_at = scheduled_at.replace(tzinfo=UTC)
+
         # Check if scheduled time is in the future
         if scheduled_at <= datetime.now(UTC):
             raise ValueError("Scheduled time must be in the future")

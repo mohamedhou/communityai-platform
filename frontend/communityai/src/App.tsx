@@ -16,6 +16,7 @@ import { SocialAccountsPage } from './features/social-accounts/pages/SocialAccou
 
 import { PostsPage } from './features/posts/pages/PostsPage'
 import { CreatePostPage } from './features/posts/pages/CreatePostPage'
+import { EditorialCalendarPage } from './features/calendar/pages/EditorialCalendarPage'
 
 
 function ProtectedLayout() {
@@ -110,6 +111,12 @@ function App() {
         <Route
           path="/posts/:postId/edit"
           element={<CreatePostPage />}
+        />
+
+        {/* Calendar */}
+        <Route
+          path="/calendar"
+          element={<EditorialCalendarPage />}
         />
 
         {/* Admin */}

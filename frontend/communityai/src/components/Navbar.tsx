@@ -56,6 +56,15 @@ export function Navbar() {
             Posts
           </NavLink>
 
+          <NavLink
+            to="/calendar"
+            className={({ isActive }) =>
+              `navbar-link ${isActive ? 'active' : ''}`
+            }
+          >
+            Calendar
+          </NavLink>
+
           {user?.role === 'ADMIN' && (
             <NavLink
               to="/admin/users"
