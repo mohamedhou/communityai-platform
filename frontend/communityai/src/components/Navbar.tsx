@@ -65,6 +65,15 @@ export function Navbar() {
             Calendar
           </NavLink>
 
+          <NavLink
+            to="/ai"
+            className={({ isActive }) =>
+              `navbar-link ${isActive ? 'active' : ''}`
+            }
+          >
+            AI Assistant
+          </NavLink>
+
           {user?.role === 'ADMIN' && (
             <NavLink
               to="/admin/users"

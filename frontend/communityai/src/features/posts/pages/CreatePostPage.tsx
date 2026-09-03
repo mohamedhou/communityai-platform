@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { useAuth } from '../../auth/hooks/useAuth'
 import * as postApi from '../services/postApi'
@@ -9,10 +9,12 @@ import { getSocialAccounts } from '../../social-accounts/services/socialApi'
 export function CreatePostPage() {
   const { accessToken } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const { postId } = useParams<{ postId?: string }>()
   const isEditMode = !!postId
 
-  const [content, setContent] = useState('')
+  const locationContent = (location.state as { content?: string } | null)?.content || ''
+  const [content, setContent] = useState(locationContent)
   const [mediaUrl, setMediaUrl] = useState('')
   const [socialAccountId, setSocialAccountId] = useState<number | ''>('')
   const [isScheduling, setIsScheduling] = useState(false)

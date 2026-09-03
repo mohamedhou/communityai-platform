@@ -53,6 +53,12 @@ class Settings(BaseSettings):
     social_token_encryption_key: str | None = Field(default=None, alias="SOCIAL_TOKEN_ENCRYPTION_KEY")
     social_mock_mode: bool = Field(default=False, alias="SOCIAL_MOCK_MODE")
 
+    ai_provider: str = Field(default="mock", alias="AI_PROVIDER")
+    openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
+    openai_model: str = Field(default="gpt-4o-mini", alias="OPENAI_MODEL")
+    gemini_api_key: str | None = Field(default=None, alias="GEMINI_API_KEY")
+    gemini_model: str = Field(default="gemini-1.5-flash", alias="GEMINI_MODEL")
+
     redis_host: str = Field(default="redis", alias="REDIS_HOST")
     redis_port: int = Field(default=6379, alias="REDIS_PORT")
 
