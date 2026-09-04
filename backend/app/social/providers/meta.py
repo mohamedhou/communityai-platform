@@ -7,11 +7,11 @@ import urllib.parse
 import httpx
 
 from app.core.config import get_settings
-from app.social.base import SocialProvider, SocialProfileInfo, SocialPublishingProvider
+from app.social.base import SocialProvider, SocialProfileInfo, SocialPublishingProvider, SocialInboxProvider
 from app.social.exceptions import SocialProviderError
 
 
-class MetaProvider(SocialProvider, SocialPublishingProvider):
+class MetaProvider(SocialProvider, SocialPublishingProvider, SocialInboxProvider):
     def get_authorization_url(self, state: str) -> str:
         settings = get_settings()
         if settings.social_mock_mode:
@@ -213,3 +213,32 @@ class MetaProvider(SocialProvider, SocialPublishingProvider):
             if isinstance(exc, SocialProviderError):
                 raise
             raise SocialProviderError(f"HTTP error during Meta publishing: {exc}") from exc
+
+    def send_reply(
+        self,
+        content: str,
+        access_token: str,
+        external_account_id: str,
+        external_interaction_id: str,
+        interaction_type: str = "COMMENT",
+    ) -> str:
+        settings = get_settings()
+        if settings.social_mock_mode:
+            return f"mock-meta-reply-{external_interaction_id}"
+
+        # Real Meta Graph API call
+        url = f"https://graph.facebook.com/v19.0/{external_interaction_id}/comments"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        payload = {"message": content}
+
+        try:
+            with httpx.Client() as client:
+                res = client.post(url, headers=headers, data=payload)
+                if res.status_code not in (200, 201):
+                    raise SocialProviderError(f"Meta reply failed: {res.text}")
+                data = res.json()
+                return data.get("id") or f"meta-reply-{external_interaction_id}"
+        except Exception as exc:
+            if isinstance(exc, SocialProviderError):
+                raise
+            raise SocialProviderError(f"HTTP error during Meta reply: {exc}") from exc

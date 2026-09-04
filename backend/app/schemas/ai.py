@@ -13,6 +13,7 @@ class AIAction(StrEnum):
     CHANGE_TONE = "CHANGE_TONE"
     ADAPT_PLATFORM = "ADAPT_PLATFORM"
     IDEATE = "IDEATE"
+    SUGGEST_REPLY = "SUGGEST_REPLY"
 
 
 class AITone(StrEnum):

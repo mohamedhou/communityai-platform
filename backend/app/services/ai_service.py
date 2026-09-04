@@ -207,3 +207,38 @@ class AIService:
         user_prompt = "\n".join(user_prompt_parts)
         result = self.provider.generate(prompt=user_prompt, system_prompt=sys_prompt)
         return self._to_response(result, AIAction.IDEATE, parse_ideas=True)
+
+    def suggest_reply(
+        self,
+        content: str,
+        interaction_type: str,
+        platform: str,
+        sender_name: str,
+        sentiment: str,
+        tone: AITone | None = None,
+        instructions: str | None = None,
+    ) -> AIResponse:
+        tone_val = tone or AITone.FRIENDLY
+        sys_prompt = self._build_system_prompt(
+            platform=None,
+            tone=tone_val,
+            action_instruction=(
+                f"You are an expert Community Manager replying to a social interaction on {platform}. "
+                f"The message is a {interaction_type} with {sentiment} sentiment from user {sender_name}. "
+                "Draft a professional, empathetic, and engaging reply ready to send directly to the user."
+            ),
+        )
+
+        user_prompt_parts = [
+            f"Sender: {sender_name}",
+            f"Platform: {platform}",
+            f"Type: {interaction_type}",
+            f"Sentiment: {sentiment}",
+            f"Original Message:\n{content.strip()}",
+        ]
+        if instructions:
+            user_prompt_parts.append(f"Additional Instructions: {instructions.strip()}")
+
+        user_prompt = "\n\n".join(user_prompt_parts)
+        result = self.provider.generate(prompt=user_prompt, system_prompt=sys_prompt)
+        return self._to_response(result, AIAction.SUGGEST_REPLY)

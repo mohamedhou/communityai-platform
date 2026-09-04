@@ -16,7 +16,14 @@ class MockAIProvider(AIProvider):
         prompt_lower = prompt.lower()
         sys_lower = (system_prompt or "").lower()
 
-        if "idea" in prompt_lower or "ideate" in sys_lower:
+        if "reply" in sys_lower or "reply" in prompt_lower or "sender:" in prompt_lower:
+            if "negative" in prompt_lower or "negative" in sys_lower:
+                content = "Bonjour, nous sommes sincèrement désolés pour cette mauvaise expérience. Pourriez-vous nous envoyer un message privé avec vos coordonnées afin que notre équipe résolve cela au plus vite ? Merci pour votre retour !"
+            elif "positive" in prompt_lower or "positive" in sys_lower:
+                content = "Merci beaucoup pour votre retour positif et votre confiance ! Nous sommes ravis que notre solution vous plaise. 🌟"
+            else:
+                content = "Bonjour, merci pour votre message ! Notre équipe reste à votre entière disposition pour répondre à toutes vos questions."
+        elif "idea" in prompt_lower or "ideate" in sys_lower:
             content = (
                 "1. 🚀 Behind-the-scenes look at our newest product launch.\n"
                 "2. 💡 3 Key lessons learned while scaling our community platform.\n"

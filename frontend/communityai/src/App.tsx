@@ -18,6 +18,7 @@ import { PostsPage } from './features/posts/pages/PostsPage'
 import { CreatePostPage } from './features/posts/pages/CreatePostPage'
 import { EditorialCalendarPage } from './features/calendar/pages/EditorialCalendarPage'
 import { AIAssistantPage } from './features/ai/pages/AIAssistantPage'
+import { InboxPage } from './features/inbox/pages/InboxPage'
 
 
 function ProtectedLayout() {
@@ -124,6 +125,12 @@ function App() {
         <Route
           path="/ai"
           element={<AIAssistantPage />}
+        />
+
+        {/* Unified Inbox */}
+        <Route
+          path="/inbox"
+          element={<InboxPage />}
         />
 
         {/* Admin */}

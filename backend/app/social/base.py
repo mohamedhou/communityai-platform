@@ -67,3 +67,17 @@ class SocialPublishingProvider(ABC):
     ) -> str:
         """Publish a post to the platform and return the external post ID."""
         pass
+
+
+class SocialInboxProvider(ABC):
+    @abstractmethod
+    def send_reply(
+        self,
+        content: str,
+        access_token: str,
+        external_account_id: str,
+        external_interaction_id: str,
+        interaction_type: str = "COMMENT",
+    ) -> str:
+        """Send a reply to an interaction on the social platform and return the external reply ID."""
+        pass

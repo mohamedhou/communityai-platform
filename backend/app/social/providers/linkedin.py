@@ -7,11 +7,11 @@ import urllib.parse
 import httpx
 
 from app.core.config import get_settings
-from app.social.base import SocialProvider, SocialProfileInfo, SocialPublishingProvider
+from app.social.base import SocialProvider, SocialProfileInfo, SocialPublishingProvider, SocialInboxProvider
 from app.social.exceptions import SocialProviderError
 
 
-class LinkedInProvider(SocialProvider, SocialPublishingProvider):
+class LinkedInProvider(SocialProvider, SocialPublishingProvider, SocialInboxProvider):
     def get_authorization_url(self, state: str) -> str:
         settings = get_settings()
         if settings.social_mock_mode:
@@ -249,3 +249,49 @@ class LinkedInProvider(SocialProvider, SocialPublishingProvider):
             if isinstance(exc, SocialProviderError):
                 raise
             raise SocialProviderError(f"HTTP error during LinkedIn publishing: {exc}") from exc
+
+    def send_reply(
+        self,
+        content: str,
+        access_token: str,
+        external_account_id: str,
+        external_interaction_id: str,
+        interaction_type: str = "COMMENT",
+    ) -> str:
+        settings = get_settings()
+        if settings.social_mock_mode:
+            return f"mock-linkedin-reply-{external_interaction_id}"
+
+        # Real LinkedIn API call for replying
+        url = f"https://api.linkedin.com/v2/socialActions/{external_interaction_id}/comments"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "X-Restli-Protocol-Version": "2.0.0",
+            "Content-Type": "application/json",
+        }
+
+        if external_account_id.startswith("urn:li:"):
+            author_urn = external_account_id
+        elif external_account_id.isdigit():
+            author_urn = f"urn:li:organization:{external_account_id}"
+        else:
+            author_urn = f"urn:li:person:{external_account_id}"
+
+        payload = {
+            "actor": author_urn,
+            "message": {
+                "text": content,
+            },
+        }
+
+        try:
+            with httpx.Client() as client:
+                res = client.post(url, headers=headers, json=payload)
+                if res.status_code not in (200, 201):
+                    raise SocialProviderError(f"LinkedIn reply failed: {res.text}")
+                data = res.json()
+                return data.get("id") or f"linkedin-reply-{external_interaction_id}"
+        except Exception as exc:
+            if isinstance(exc, SocialProviderError):
+                raise
+            raise SocialProviderError(f"HTTP error during LinkedIn reply: {exc}") from exc
