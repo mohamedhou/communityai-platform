@@ -20,6 +20,7 @@ import { EditorialCalendarPage } from './features/calendar/pages/EditorialCalend
 import { AIAssistantPage } from './features/ai/pages/AIAssistantPage'
 import { InboxPage } from './features/inbox/pages/InboxPage'
 import { AnalyticsPage } from './features/analytics/pages/AnalyticsPage'
+import { NotificationsPage } from './features/notifications/pages/NotificationsPage'
 
 
 function ProtectedLayout() {
@@ -138,6 +139,11 @@ function App() {
         <Route
           path="/analytics"
           element={<AnalyticsPage />}
+        />
+
+        <Route
+          path="/notifications"
+          element={<NotificationsPage />}
         />
 
         {/* Admin */}

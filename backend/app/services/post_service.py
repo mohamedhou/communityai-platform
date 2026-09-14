@@ -124,6 +124,18 @@ class PostService:
         self.db.add(post)
         self.db.commit()
         self.db.refresh(post)
+
+        try:
+            from app.services.notification_service import NotificationService
+            NotificationService().notify_post_scheduled(
+                db=self.db,
+                user_id=user_id,
+                post_id=post.id,
+                scheduled_at=scheduled_at,
+            )
+        except Exception:
+            pass
+
         return post
 
     def cancel_post(self, user_id: int, post_id: int) -> Post:
@@ -195,12 +207,33 @@ class PostService:
             post.published_at = datetime.now(UTC)
             self.db.add(post)
             self.db.commit()
+
+            try:
+                from app.services.notification_service import NotificationService
+                NotificationService().notify_post_published(
+                    db=self.db,
+                    user_id=user_id,
+                    post_id=post.id,
+                )
+            except Exception:
+                pass
         except Exception as exc:
             # Update DB with failure
             post.status = PostStatus.FAILED
             post.error_message = str(exc)
             self.db.add(post)
             self.db.commit()
+
+            try:
+                from app.services.notification_service import NotificationService
+                NotificationService().notify_post_failed(
+                    db=self.db,
+                    user_id=user_id,
+                    post_id=post.id,
+                    error_message=str(exc),
+                )
+            except Exception:
+                pass
 
         self.db.refresh(post)
         return post

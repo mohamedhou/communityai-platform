@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../features/auth/hooks/useAuth'
+import { NotificationBell } from '../features/notifications/components/NotificationBell'
 
 export function Navbar() {
   const { user, logout } = useAuth()
@@ -105,6 +106,7 @@ export function Navbar() {
         </nav>
 
         <div className="navbar-user">
+          <NotificationBell />
           {user && (
             <span className="navbar-user-text">
               {user.first_name} {user.last_name} ({user.role})

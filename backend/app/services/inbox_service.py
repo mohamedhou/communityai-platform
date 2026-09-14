@@ -198,8 +198,25 @@ class InboxService:
             db.commit()
             db.refresh(account)
 
-        return self.repository.seed_mock_interactions(
+        created_items = self.repository.seed_mock_interactions(
             db=db,
             user_id=user_id,
             social_account_id=account.id,
         )
+
+        try:
+            from app.services.notification_service import NotificationService
+            notif_service = NotificationService()
+            for msg in created_items:
+                if not msg.is_read:
+                    notif_service.notify_inbox_message(
+                        db=db,
+                        user_id=user_id,
+                        message_id=msg.id,
+                        sender_name=msg.sender_name,
+                        preview=msg.content,
+                    )
+        except Exception:
+            pass
+
+        return created_items

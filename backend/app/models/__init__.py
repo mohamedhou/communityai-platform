@@ -1,3 +1,4 @@
+from app.models.notification import Notification, NotificationType, NotificationSeverity
 from app.models.refresh_token import RefreshToken
 from app.models.user import User, UserRole
 from app.models.post import Post, PostStatus
@@ -18,5 +19,8 @@ __all__ = [
     "InboxMessageType",
     "InboxSentiment",
     "AnalyticsSnapshot",
+    "Notification",
+    "NotificationType",
+    "NotificationSeverity",
 ]
 
