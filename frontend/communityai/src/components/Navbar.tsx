@@ -83,6 +83,15 @@ export function Navbar() {
             Inbox
           </NavLink>
 
+          <NavLink
+            to="/analytics"
+            className={({ isActive }) =>
+              `navbar-link ${isActive ? 'active' : ''}`
+            }
+          >
+            Analytics
+          </NavLink>
+
           {user?.role === 'ADMIN' && (
             <NavLink
               to="/admin/users"

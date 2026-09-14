@@ -19,6 +19,7 @@ import { CreatePostPage } from './features/posts/pages/CreatePostPage'
 import { EditorialCalendarPage } from './features/calendar/pages/EditorialCalendarPage'
 import { AIAssistantPage } from './features/ai/pages/AIAssistantPage'
 import { InboxPage } from './features/inbox/pages/InboxPage'
+import { AnalyticsPage } from './features/analytics/pages/AnalyticsPage'
 
 
 function ProtectedLayout() {
@@ -131,6 +132,12 @@ function App() {
         <Route
           path="/inbox"
           element={<InboxPage />}
+        />
+
+        {/* Analytics & Reporting */}
+        <Route
+          path="/analytics"
+          element={<AnalyticsPage />}
         />
 
         {/* Admin */}

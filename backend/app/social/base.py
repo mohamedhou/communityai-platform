@@ -81,3 +81,37 @@ class SocialInboxProvider(ABC):
     ) -> str:
         """Send a reply to an interaction on the social platform and return the external reply ID."""
         pass
+
+
+class SocialAnalyticsProvider(ABC):
+    @abstractmethod
+    def get_account_metrics(
+        self,
+        access_token: str,
+        external_account_id: str,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+    ) -> dict[str, Any]:
+        """Fetch overall analytics metrics for an account."""
+        pass
+
+    @abstractmethod
+    def get_post_metrics(
+        self,
+        access_token: str,
+        external_account_id: str,
+        external_post_id: str,
+    ) -> dict[str, Any]:
+        """Fetch analytics metrics for a specific post."""
+        pass
+
+    @abstractmethod
+    def get_time_series(
+        self,
+        access_token: str,
+        external_account_id: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> list[dict[str, Any]]:
+        """Fetch time-series analytics data for an account."""
+        pass

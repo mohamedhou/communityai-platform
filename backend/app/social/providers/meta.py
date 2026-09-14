@@ -7,11 +7,11 @@ import urllib.parse
 import httpx
 
 from app.core.config import get_settings
-from app.social.base import SocialProvider, SocialProfileInfo, SocialPublishingProvider, SocialInboxProvider
+from app.social.base import SocialProvider, SocialProfileInfo, SocialPublishingProvider, SocialInboxProvider, SocialAnalyticsProvider
 from app.social.exceptions import SocialProviderError
 
 
-class MetaProvider(SocialProvider, SocialPublishingProvider, SocialInboxProvider):
+class MetaProvider(SocialProvider, SocialPublishingProvider, SocialInboxProvider, SocialAnalyticsProvider):
     def get_authorization_url(self, state: str) -> str:
         settings = get_settings()
         if settings.social_mock_mode:
@@ -242,3 +242,87 @@ class MetaProvider(SocialProvider, SocialPublishingProvider, SocialInboxProvider
             if isinstance(exc, SocialProviderError):
                 raise
             raise SocialProviderError(f"HTTP error during Meta reply: {exc}") from exc
+
+    def get_account_metrics(
+        self,
+        access_token: str,
+        external_account_id: str,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+    ) -> dict[str, Any]:
+        settings = get_settings()
+        if settings.social_mock_mode:
+            return {
+                "followers": 12450,
+                "follower_growth": 340,
+                "impressions": 48200,
+                "reach": 35600,
+                "engagement": 2980,
+                "likes": 2100,
+                "comments": 530,
+                "shares": 220,
+                "clicks": 130,
+                "posts_published": 14,
+            }
+        # Future live Meta Graph API insights
+        return {"followers": 0, "impressions": 0, "reach": 0, "engagement": 0}
+
+    def get_post_metrics(
+        self,
+        access_token: str,
+        external_account_id: str,
+        external_post_id: str,
+    ) -> dict[str, Any]:
+        settings = get_settings()
+        if settings.social_mock_mode:
+            return {
+                "likes": 145,
+                "comments": 32,
+                "shares": 18,
+                "clicks": 45,
+                "impressions": 3200,
+                "reach": 2800,
+                "engagement": 240,
+            }
+        return {"likes": 0, "comments": 0, "shares": 0, "clicks": 0, "impressions": 0, "reach": 0, "engagement": 0}
+
+    def get_time_series(
+        self,
+        access_token: str,
+        external_account_id: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> list[dict[str, Any]]:
+        settings = get_settings()
+        if settings.social_mock_mode:
+            points = []
+            cur = start_date
+            base_followers = 12000
+            day_idx = 0
+            while cur <= end_date:
+                daily_growth = 10 + (day_idx % 7) * 4
+                base_followers += daily_growth
+                reach = 1200 + (day_idx % 5) * 200 + (day_idx * 15)
+                impressions = int(reach * 1.35)
+                likes = 60 + (day_idx % 6) * 15
+                comments = 15 + (day_idx % 4) * 5
+                shares = 6 + (day_idx % 3) * 3
+                clicks = 12 + (day_idx % 5) * 4
+                engagement = likes + comments + shares + clicks
+                points.append({
+                    "date": cur.date() if isinstance(cur, datetime) else cur,
+                    "followers": base_followers,
+                    "follower_growth": daily_growth,
+                    "impressions": impressions,
+                    "reach": reach,
+                    "engagement": engagement,
+                    "likes": likes,
+                    "comments": comments,
+                    "shares": shares,
+                    "clicks": clicks,
+                    "posts_published": 1 if day_idx % 2 == 0 else 0,
+                })
+                cur += timedelta(days=1)
+                day_idx += 1
+            return points
+        return []
