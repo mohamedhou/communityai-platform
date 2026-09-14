@@ -21,6 +21,8 @@ import { AIAssistantPage } from './features/ai/pages/AIAssistantPage'
 import { InboxPage } from './features/inbox/pages/InboxPage'
 import { AnalyticsPage } from './features/analytics/pages/AnalyticsPage'
 import { NotificationsPage } from './features/notifications/pages/NotificationsPage'
+import { SettingsPage } from './features/settings/pages/SettingsPage'
+import { ReportingPage } from './features/reporting/pages/ReportingPage'
 
 
 function ProtectedLayout() {
@@ -142,8 +144,18 @@ function App() {
         />
 
         <Route
+          path="/reports"
+          element={<ReportingPage />}
+        />
+
+        <Route
           path="/notifications"
           element={<NotificationsPage />}
+        />
+
+        <Route
+          path="/settings"
+          element={<SettingsPage />}
         />
 
         {/* Admin */}

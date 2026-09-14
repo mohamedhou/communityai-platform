@@ -1,0 +1,1 @@
+export function ReportEmptyState() { return <div className="report-empty-state"><div className="analytics-empty-icon">▤</div><h3>Générez votre premier rapport</h3><p>Sélectionnez une période puis générez un aperçu à partir de vos données Analytics.</p></div> }

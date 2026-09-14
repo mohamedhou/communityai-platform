@@ -93,6 +93,25 @@ export function Navbar() {
             Analytics
           </NavLink>
 
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              `navbar-link ${isActive ? 'active' : ''}`
+            }
+            title="Settings"
+          >
+            ⚙ Settings
+          </NavLink>
+
+          <NavLink
+            to="/reports"
+            className={({ isActive }) =>
+              `navbar-link ${isActive ? 'active' : ''}`
+            }
+          >
+            Reports
+          </NavLink>
+
           {user?.role === 'ADMIN' && (
             <NavLink
               to="/admin/users"

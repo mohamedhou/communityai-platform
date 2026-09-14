@@ -1,0 +1,3 @@
+export function ReportExportButtons({ onExport, isExporting, error, success }: { onExport: (format: 'csv' | 'pdf') => void; isExporting: boolean; error?: string; success: string }) {
+  return <div className="report-export-actions"><button type="button" className="btn btn-outline" onClick={() => onExport('csv')} disabled={isExporting}>Exporter CSV</button><button type="button" className="btn btn-primary" onClick={() => onExport('pdf')} disabled={isExporting}>Exporter PDF</button>{isExporting && <span>Export en cours...</span>}{success && <span className="form-success">{success}</span>}{error && <span className="form-error">{error}</span>}</div>
+}
