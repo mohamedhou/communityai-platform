@@ -9,6 +9,7 @@ os.environ["SOCIAL_MOCK_MODE"] = "true"
 from sqlalchemy.orm import Session
 
 from app.core.encryption import encrypt_token, decrypt_token
+from app.core.config import get_settings
 from app.models.user import User
 from app.social.models import OAuthState, SocialAccount, SocialAccountStatus
 
@@ -207,3 +208,84 @@ def test_missing_encryption_key_validation(client, db_session: Session):
     finally:
         if old_key:
             os.environ["SOCIAL_TOKEN_ENCRYPTION_KEY"] = old_key
+
+
+def test_oauth_state_is_bound_to_provider(client, db_session: Session):
+    client.post("/api/v1/auth/register", json=_register_payload("provider-state@example.com"))
+    token = _login(client, email="provider-state@example.com").json()["access_token"]
+    client.get("/api/v1/social-accounts/meta/connect", headers={"Authorization": f"Bearer {token}"})
+    state = db_session.query(OAuthState).one().state
+
+    response = client.get(
+        f"/api/v1/social-accounts/linkedin/callback?code=mock-code&state={state}",
+        follow_redirects=False,
+    )
+    assert response.status_code == 307
+    assert "state_invalid_or_expired" in response.headers["location"]
+    assert db_session.query(SocialAccount).count() == 0
+
+
+def test_expired_and_reused_oauth_states_are_rejected(client, db_session: Session):
+    client.post("/api/v1/auth/register", json=_register_payload("state-replay@example.com"))
+    token = _login(client, email="state-replay@example.com").json()["access_token"]
+    client.get("/api/v1/social-accounts/meta/connect", headers={"Authorization": f"Bearer {token}"})
+    state = db_session.query(OAuthState).one()
+    state.expires_at = state.expires_at.replace(year=2020)
+    db_session.commit()
+
+    expired = client.get(
+        f"/api/v1/social-accounts/meta/callback?code=mock-code&state={state.state}",
+        follow_redirects=False,
+    )
+    assert "state_invalid_or_expired" in expired.headers["location"]
+
+    client.get("/api/v1/social-accounts/meta/connect", headers={"Authorization": f"Bearer {token}"})
+    fresh_state = db_session.query(OAuthState).one().state
+    first = client.get(
+        f"/api/v1/social-accounts/meta/callback?code=mock-code&state={fresh_state}",
+        follow_redirects=False,
+    )
+    second = client.get(
+        f"/api/v1/social-accounts/meta/callback?code=mock-code&state={fresh_state}",
+        follow_redirects=False,
+    )
+    assert first.status_code == 307
+    assert second.status_code == 307
+    assert "state_invalid_or_expired" in second.headers["location"]
+
+
+def test_real_mode_requires_configuration_and_generates_provider_url(client):
+    old_values = {key: os.environ.get(key) for key in (
+        "SOCIAL_MOCK_MODE", "META_CLIENT_ID", "META_CLIENT_SECRET", "META_REDIRECT_URI",
+        "LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET", "LINKEDIN_REDIRECT_URI",
+    )}
+    try:
+        os.environ["SOCIAL_MOCK_MODE"] = "false"
+        for key in old_values:
+            if key != "SOCIAL_MOCK_MODE":
+                os.environ.pop(key, None)
+        get_settings.cache_clear()
+        client.post("/api/v1/auth/register", json=_register_payload("real-mode@example.com"))
+        token = _login(client, email="real-mode@example.com").json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        missing = client.get("/api/v1/social-accounts/meta/connect", headers=headers)
+        assert missing.status_code == 502
+        assert missing.json()["detail"] == "Meta OAuth is not configured"
+
+        os.environ.update({
+            "META_CLIENT_ID": "meta-test-client",
+            "META_CLIENT_SECRET": "meta-test-secret",
+            "META_REDIRECT_URI": "http://localhost:8000/api/v1/social-accounts/meta/callback",
+        })
+        get_settings.cache_clear()
+        configured = client.get("/api/v1/social-accounts/meta/connect", headers=headers)
+        assert configured.status_code == 200
+        assert "facebook.com" in configured.json()["url"]
+        assert "meta-test-client" in configured.json()["url"]
+    finally:
+        for key, value in old_values.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        get_settings.cache_clear()

@@ -18,15 +18,15 @@ class LinkedInProvider(SocialProvider, SocialPublishingProvider, SocialInboxProv
             # Under mock mode, redirect directly to the backend callback endpoint
             return f"http://localhost:8000/api/v1/social-accounts/linkedin/callback?code=mock-linkedin-code&state={state}"
 
-        if not settings.linkedin_client_id or not settings.linkedin_redirect_uri:
-            raise SocialProviderError("LinkedIn OAuth client_id or redirect_uri not configured")
+        if not settings.linkedin_client_id or not settings.linkedin_client_secret or not settings.linkedin_redirect_uri:
+            raise SocialProviderError("LinkedIn OAuth is not configured")
 
         params = {
             "response_type": "code",
             "client_id": settings.linkedin_client_id,
             "redirect_uri": settings.linkedin_redirect_uri,
             "state": state,
-            "scope": "r_liteprofile w_member_social",  # standard lite profile and post permission scopes
+            "scope": "openid profile email w_member_social",
         }
         return "https://www.linkedin.com/oauth/v2/authorization?" + urllib.parse.urlencode(params)
 
@@ -40,7 +40,7 @@ class LinkedInProvider(SocialProvider, SocialPublishingProvider, SocialInboxProv
             }
 
         if not settings.linkedin_client_id or not settings.linkedin_client_secret or not settings.linkedin_redirect_uri:
-            raise SocialProviderError("LinkedIn credentials not configured")
+            raise SocialProviderError("LinkedIn OAuth is not configured")
 
         url = "https://www.linkedin.com/oauth/v2/accessToken"
         data = {
@@ -55,7 +55,7 @@ class LinkedInProvider(SocialProvider, SocialPublishingProvider, SocialInboxProv
             with httpx.Client() as client:
                 res = client.post(url, data=data)
                 if res.status_code != 200:
-                    raise SocialProviderError(f"LinkedIn token exchange failed: {res.text}")
+                    raise SocialProviderError("LinkedIn token exchange failed")
                 return res.json()
         except Exception as exc:
             if isinstance(exc, SocialProviderError):
@@ -79,7 +79,7 @@ class LinkedInProvider(SocialProvider, SocialPublishingProvider, SocialInboxProv
                     access_token=tokens["access_token"],
                     refresh_token=tokens.get("refresh_token"),
                     expires_at=expires_at,
-                    scopes="r_liteprofile w_member_social",
+                    scopes="openid profile email w_member_social",
                 )
             ]
 
@@ -87,35 +87,24 @@ class LinkedInProvider(SocialProvider, SocialPublishingProvider, SocialInboxProv
         if not access_token:
             raise SocialProviderError("No access token provided to fetch LinkedIn profile")
 
-        # In real mode, call LinkedIn Lite Profile API to get user info
-        profile_url = "https://api.linkedin.com/v2/me"
+        # In real mode, use LinkedIn's OpenID Connect identity endpoint.
+        profile_url = "https://api.linkedin.com/v2/userinfo"
         headers = {"Authorization": f"Bearer {access_token}"}
 
         try:
             with httpx.Client() as client:
                 res = client.get(profile_url, headers=headers)
                 if res.status_code != 200:
-                    raise SocialProviderError(f"Failed to fetch LinkedIn profile: {res.text}")
+                    raise SocialProviderError("Failed to fetch LinkedIn profile")
                 
                 profile_data = res.json()
-                first_name = profile_data.get("localizedFirstName", "")
-                last_name = profile_data.get("localizedLastName", "")
+                first_name = profile_data.get("given_name", "")
+                last_name = profile_data.get("family_name", "")
                 full_name = f"{first_name} {last_name}".strip() or "LinkedIn Member"
-                member_id = profile_data.get("id")
-
-                # Fetch profile picture
-                pic_url = "https://api.linkedin.com/v2/me?projection=(id,profilePicture(displayImage~:playableStreams))"
-                pic_res = client.get(pic_url, headers=headers)
-                profile_image_url = None
-                if pic_res.status_code == 200:
-                    try:
-                        pic_data = pic_res.json()
-                        elements = pic_data.get("profilePicture", {}).get("displayImage~", {}).get("elements", [])
-                        if elements:
-                            # Use the last size stream
-                            profile_image_url = elements[-1].get("identifiers", [{}])[0].get("identifier")
-                    except Exception:
-                        pass
+                member_id = profile_data.get("sub")
+                profile_image_url = profile_data.get("picture")
+                if not member_id:
+                    raise SocialProviderError("LinkedIn profile did not include an identity")
 
                 expires_at = None
                 if "expires_in" in tokens:
@@ -131,7 +120,7 @@ class LinkedInProvider(SocialProvider, SocialPublishingProvider, SocialInboxProv
                         access_token=access_token,
                         refresh_token=tokens.get("refresh_token"),
                         expires_at=expires_at,
-                        scopes=tokens.get("scope", "r_liteprofile w_member_social"),
+                        scopes=tokens.get("scope", "openid profile email w_member_social"),
                     )
                 ]
         except Exception as exc:
@@ -149,7 +138,7 @@ class LinkedInProvider(SocialProvider, SocialPublishingProvider, SocialInboxProv
             }
 
         if not settings.linkedin_client_id or not settings.linkedin_client_secret:
-            raise SocialProviderError("LinkedIn credentials not configured")
+            raise SocialProviderError("LinkedIn OAuth is not configured")
 
         url = "https://www.linkedin.com/oauth/v2/accessToken"
         data = {
@@ -163,7 +152,7 @@ class LinkedInProvider(SocialProvider, SocialPublishingProvider, SocialInboxProv
             with httpx.Client() as client:
                 res = client.post(url, data=data)
                 if res.status_code != 200:
-                    raise SocialProviderError(f"LinkedIn token refresh failed: {res.text}")
+                    raise SocialProviderError("LinkedIn token refresh failed")
                 return res.json()
         except Exception as exc:
             if isinstance(exc, SocialProviderError):
@@ -242,7 +231,7 @@ class LinkedInProvider(SocialProvider, SocialPublishingProvider, SocialInboxProv
             with httpx.Client() as client:
                 res = client.post(url, headers=headers, json=payload)
                 if res.status_code not in (200, 201):
-                    raise SocialProviderError(f"LinkedIn publishing failed: {res.text}")
+                    raise SocialProviderError("LinkedIn publishing failed")
                 data = res.json()
                 return data.get("id") or "linkedin-post-id"
         except Exception as exc:
@@ -288,7 +277,7 @@ class LinkedInProvider(SocialProvider, SocialPublishingProvider, SocialInboxProv
             with httpx.Client() as client:
                 res = client.post(url, headers=headers, json=payload)
                 if res.status_code not in (200, 201):
-                    raise SocialProviderError(f"LinkedIn reply failed: {res.text}")
+                    raise SocialProviderError("LinkedIn reply failed")
                 data = res.json()
                 return data.get("id") or f"linkedin-reply-{external_interaction_id}"
         except Exception as exc:

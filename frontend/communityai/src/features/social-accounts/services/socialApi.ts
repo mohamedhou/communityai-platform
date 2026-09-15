@@ -52,6 +52,19 @@ export function getSocialAccounts(accessToken: string): Promise<SocialAccount[]>
   })
 }
 
+export interface SocialConnectionMode {
+  mock_mode: boolean
+  meta_configured: boolean
+  linkedin_configured: boolean
+}
+
+export function getSocialConnectionMode(accessToken: string): Promise<SocialConnectionMode> {
+  return request<SocialConnectionMode>('/api/v1/social-accounts/mode', {
+    method: 'GET',
+    accessToken,
+  })
+}
+
 export function getConnectUrl(
   accessToken: string,
   platform: string,

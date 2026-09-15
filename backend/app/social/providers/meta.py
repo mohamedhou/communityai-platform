@@ -18,8 +18,8 @@ class MetaProvider(SocialProvider, SocialPublishingProvider, SocialInboxProvider
             # Under mock mode, redirect directly to the backend callback endpoint
             return f"http://localhost:8000/api/v1/social-accounts/meta/callback?code=mock-meta-code&state={state}"
 
-        if not settings.meta_client_id or not settings.meta_redirect_uri:
-            raise SocialProviderError("Meta OAuth client_id or redirect_uri not configured")
+        if not settings.meta_client_id or not settings.meta_client_secret or not settings.meta_redirect_uri:
+            raise SocialProviderError("Meta OAuth is not configured")
 
         params = {
             "client_id": settings.meta_client_id,
@@ -28,7 +28,7 @@ class MetaProvider(SocialProvider, SocialPublishingProvider, SocialInboxProvider
             "scope": "pages_show_list,pages_read_engagement,instagram_basic,instagram_manage_insights",
             "response_type": "code",
         }
-        return "https://www.facebook.com/v19.0/dialog/oauth?" + urllib.parse.urlencode(params)
+        return f"https://www.facebook.com/{settings.meta_graph_api_version}/dialog/oauth?" + urllib.parse.urlencode(params)
 
     def exchange_code(self, code: str) -> dict[str, Any]:
         settings = get_settings()
@@ -39,9 +39,9 @@ class MetaProvider(SocialProvider, SocialPublishingProvider, SocialInboxProvider
             }
 
         if not settings.meta_client_id or not settings.meta_client_secret or not settings.meta_redirect_uri:
-            raise SocialProviderError("Meta credentials not configured")
+            raise SocialProviderError("Meta OAuth is not configured")
 
-        url = "https://graph.facebook.com/v19.0/oauth/access_token"
+        url = f"https://graph.facebook.com/{settings.meta_graph_api_version}/oauth/access_token"
         params = {
             "client_id": settings.meta_client_id,
             "client_secret": settings.meta_client_secret,
@@ -53,7 +53,7 @@ class MetaProvider(SocialProvider, SocialPublishingProvider, SocialInboxProvider
             with httpx.Client() as client:
                 res = client.get(url, params=params)
                 if res.status_code != 200:
-                    raise SocialProviderError(f"Meta token exchange failed: {res.text}")
+                    raise SocialProviderError("Meta token exchange failed")
                 return res.json()
         except Exception as exc:
             if isinstance(exc, SocialProviderError):
@@ -97,7 +97,8 @@ class MetaProvider(SocialProvider, SocialPublishingProvider, SocialInboxProvider
 
         # In real mode, query the Facebook Graph API to list Pages and find Instagram accounts linked
         # Step 1: GET /me/accounts to list Facebook pages
-        pages_url = "https://graph.facebook.com/v19.0/me/accounts"
+        graph_base = f"https://graph.facebook.com/{settings.meta_graph_api_version}"
+        pages_url = f"{graph_base}/me/accounts"
         headers = {"Authorization": f"Bearer {access_token}"}
         profiles = []
 
@@ -106,7 +107,7 @@ class MetaProvider(SocialProvider, SocialPublishingProvider, SocialInboxProvider
                 # 1. Fetch FB pages
                 res = client.get(pages_url, headers=headers)
                 if res.status_code != 200:
-                    raise SocialProviderError(f"Failed to fetch Facebook pages: {res.text}")
+                    raise SocialProviderError("Failed to fetch Facebook pages")
                 
                 pages_data = res.json().get("data", [])
                 for page in pages_data:
@@ -115,7 +116,7 @@ class MetaProvider(SocialProvider, SocialPublishingProvider, SocialInboxProvider
                     page_token = page.get("access_token")
                     
                     # Fetch Facebook Page profile image
-                    pic_url = f"https://graph.facebook.com/v19.0/{page_id}/picture"
+                    pic_url = f"{graph_base}/{page_id}/picture"
                     pic_params = {"redirect": "false", "type": "large"}
                     pic_res = client.get(pic_url, headers=headers, params=pic_params)
                     profile_image_url = None
@@ -136,7 +137,7 @@ class MetaProvider(SocialProvider, SocialPublishingProvider, SocialInboxProvider
                     )
 
                     # Step 2: Query linked Instagram Business account
-                    ig_url = f"https://graph.facebook.com/v19.0/{page_id}"
+                    ig_url = f"{graph_base}/{page_id}"
                     ig_params = {"fields": "instagram_business_account"}
                     ig_res = client.get(ig_url, headers=headers, params=ig_params)
                     if ig_res.status_code == 200:
@@ -144,7 +145,7 @@ class MetaProvider(SocialProvider, SocialPublishingProvider, SocialInboxProvider
                         if ig_account:
                             ig_id = ig_account.get("id")
                             # Fetch Instagram Account details
-                            ig_info_url = f"https://graph.facebook.com/v19.0/{ig_id}"
+                            ig_info_url = f"{graph_base}/{ig_id}"
                             ig_info_params = {"fields": "name,username,profile_picture_url"}
                             ig_info_res = client.get(ig_info_url, headers=headers, params=ig_info_params)
                             if ig_info_res.status_code == 200:
@@ -177,7 +178,7 @@ class MetaProvider(SocialProvider, SocialPublishingProvider, SocialInboxProvider
             return
 
         # Meta revocation: DELETE /me/permissions
-        url = "https://graph.facebook.com/v19.0/me/permissions"
+        url = f"https://graph.facebook.com/{settings.meta_graph_api_version}/me/permissions"
         headers = {"Authorization": f"Bearer {access_token}"}
         try:
             with httpx.Client() as client:
@@ -196,7 +197,7 @@ class MetaProvider(SocialProvider, SocialPublishingProvider, SocialInboxProvider
         if settings.social_mock_mode:
             return "mock-meta-post-id"
 
-        url = f"https://graph.facebook.com/v19.0/{external_account_id}/feed"
+        url = f"https://graph.facebook.com/{settings.meta_graph_api_version}/{external_account_id}/feed"
         headers = {"Authorization": f"Bearer {access_token}"}
         payload = {"message": content}
         if media_url:
@@ -206,7 +207,7 @@ class MetaProvider(SocialProvider, SocialPublishingProvider, SocialInboxProvider
             with httpx.Client() as client:
                 res = client.post(url, headers=headers, data=payload)
                 if res.status_code not in (200, 201):
-                    raise SocialProviderError(f"Meta publishing failed: {res.text}")
+                    raise SocialProviderError("Meta publishing failed")
                 data = res.json()
                 return data.get("id") or "meta-post-id"
         except Exception as exc:
@@ -227,7 +228,7 @@ class MetaProvider(SocialProvider, SocialPublishingProvider, SocialInboxProvider
             return f"mock-meta-reply-{external_interaction_id}"
 
         # Real Meta Graph API call
-        url = f"https://graph.facebook.com/v19.0/{external_interaction_id}/comments"
+        url = f"https://graph.facebook.com/{settings.meta_graph_api_version}/{external_interaction_id}/comments"
         headers = {"Authorization": f"Bearer {access_token}"}
         payload = {"message": content}
 
@@ -235,7 +236,7 @@ class MetaProvider(SocialProvider, SocialPublishingProvider, SocialInboxProvider
             with httpx.Client() as client:
                 res = client.post(url, headers=headers, data=payload)
                 if res.status_code not in (200, 201):
-                    raise SocialProviderError(f"Meta reply failed: {res.text}")
+                    raise SocialProviderError("Meta reply failed")
                 data = res.json()
                 return data.get("id") or f"meta-reply-{external_interaction_id}"
         except Exception as exc:

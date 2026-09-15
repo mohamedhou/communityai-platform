@@ -28,8 +28,15 @@ class SocialAccountService:
             raise ValueError(f"Unknown social platform: {platform_or_provider}")
 
     def create_authorization_url(self, user_id: int, platform: str) -> str:
-        # 1. Generate secure, cryptographically random state parameter
-        state_str = str(uuid.uuid4())
+        normalized_platform = platform.lower().strip()
+        provider = self.get_provider(normalized_platform)
+
+        # Bind the provider to the CSRF state without requiring a migration.
+        state_str = f"{normalized_platform}:{uuid.uuid4()}"
+
+        # Validate provider configuration before persisting a state. A failed
+        # initiation must not leave an unusable OAuth state in the database.
+        authorization_url = provider.get_authorization_url(state_str)
 
         # 2. Save it in database with user_id and expiration (10 minutes)
         oauth_state = OAuthState(
@@ -40,16 +47,15 @@ class SocialAccountService:
         self.db.add(oauth_state)
         self.db.commit()
 
-        # 3. Ask provider for the OAuth url containing this state
-        provider = self.get_provider(platform)
-        return provider.get_authorization_url(state_str)
+        return authorization_url
 
     def process_callback(self, platform: str, code: str, state: str) -> list[SocialAccount]:
-        # 1. Validate and consume the state parameter (protect against CSRF)
-        user_id = self.validate_and_consume_state(state)
+        normalized_platform = platform.lower().strip()
+        # Validate the provider binding before calling an external provider.
+        user_id, oauth_state = self.validate_state(state, expected_provider=normalized_platform)
 
         # 2. Get provider
-        provider = self.get_provider(platform)
+        provider = self.get_provider(normalized_platform)
 
         # 3. Exchange OAuth code for tokens
         tokens = provider.exchange_code(code)
@@ -105,6 +111,9 @@ class SocialAccountService:
                 self.db.add(new_account)
                 connected_accounts.append(new_account)
 
+        # Consume state with the account upsert so failed callbacks do not
+        # create orphaned connections and successful states cannot be replayed.
+        self.db.delete(oauth_state)
         self.db.commit()
         for acc in connected_accounts:
             self.db.refresh(acc)
@@ -169,7 +178,7 @@ class SocialAccountService:
         self.db.refresh(account)
         return account
 
-    def validate_and_consume_state(self, state_str: str) -> int:
+    def validate_state(self, state_str: str, expected_provider: str) -> tuple[int, OAuthState]:
         stmt = select(OAuthState).where(OAuthState.state == state_str)
         oauth_state = self.db.execute(stmt).scalar_one_or_none()
         if not oauth_state:
@@ -184,8 +193,18 @@ class SocialAccountService:
             self.db.commit()
             raise OAuthStateExpiredOrInvalid("OAuth state expired")
 
-        user_id = oauth_state.user_id
-        # Single-use: consume (delete) immediately
+        state_provider, separator, _ = state_str.partition(":")
+        if not separator or state_provider != expected_provider:
+            raise OAuthStateExpiredOrInvalid("OAuth state provider mismatch")
+
+        return oauth_state.user_id, oauth_state
+
+    def validate_and_consume_state(self, state_str: str) -> int:
+        """Compatibility helper for callers that explicitly need immediate consumption."""
+        state_provider, separator, _ = state_str.partition(":")
+        if not separator:
+            raise OAuthStateExpiredOrInvalid("OAuth state provider missing")
+        user_id, oauth_state = self.validate_state(state_str, expected_provider=state_provider)
         self.db.delete(oauth_state)
         self.db.commit()
         return user_id

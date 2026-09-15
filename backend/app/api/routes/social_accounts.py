@@ -15,6 +15,33 @@ from app.social.exceptions import OAuthStateExpiredOrInvalid, SocialProviderErro
 router = APIRouter(prefix="/api/v1/social-accounts", tags=["social-accounts"])
 
 
+def _safe_configuration_status() -> dict[str, object]:
+    """Expose only safe connection-mode metadata for the frontend."""
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    return {
+        "mock_mode": settings.social_mock_mode,
+        "meta_configured": bool(settings.meta_client_id and settings.meta_client_secret and settings.meta_redirect_uri),
+        "linkedin_configured": bool(
+            settings.linkedin_client_id and settings.linkedin_client_secret and settings.linkedin_redirect_uri
+        ),
+    }
+
+
+@router.get("/mode")
+def get_social_mode(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict[str, object]:
+    return _safe_configuration_status()
+
+
+@router.get("/config-status")
+def get_social_config_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, object]:
+    return _safe_configuration_status()
+
+
 @router.get("", response_model=list[SocialAccountResponse])
 def list_social_accounts(
     current_user: User = Depends(get_current_user),
@@ -52,21 +79,30 @@ def oauth_callback(
     platform: str,
     code: str,
     state: str,
+    error: str | None = None,
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     service = SocialAccountService(db)
-    frontend_base_url = "http://localhost:5173/social-accounts"
+    from app.core.config import get_settings
+
+    frontend_base_url = f"{get_settings().frontend_app_url.rstrip('/')}/social-accounts"
     try:
+        if error:
+            return RedirectResponse(url=f"{frontend_base_url}?error=provider_denied")
         service.process_callback(platform, code, state)
         return RedirectResponse(url=frontend_base_url)
     except OAuthStateExpiredOrInvalid as exc:
         err_param = urllib.parse.quote("state_invalid_or_expired")
         return RedirectResponse(url=f"{frontend_base_url}?error={err_param}")
     except SocialProviderError as exc:
-        err_param = urllib.parse.quote(str(exc))
+        safe_error = "oauth_provider_error"
+        message = str(exc)
+        if "not configured" in message.lower():
+            safe_error = "oauth_not_configured"
+        err_param = urllib.parse.quote(safe_error)
         return RedirectResponse(url=f"{frontend_base_url}?error={err_param}")
-    except Exception as exc:
-        err_param = urllib.parse.quote(f"Unexpected error: {exc}")
+    except Exception:
+        err_param = urllib.parse.quote("oauth_unexpected_error")
         return RedirectResponse(url=f"{frontend_base_url}?error={err_param}")
 
 

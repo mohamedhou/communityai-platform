@@ -45,10 +45,12 @@ class Settings(BaseSettings):
     meta_client_id: str | None = Field(default=None, alias="META_CLIENT_ID")
     meta_client_secret: str | None = Field(default=None, alias="META_CLIENT_SECRET")
     meta_redirect_uri: str | None = Field(default=None, alias="META_REDIRECT_URI")
+    meta_graph_api_version: str = Field(default="v24.0", alias="META_GRAPH_API_VERSION")
 
     linkedin_client_id: str | None = Field(default=None, alias="LINKEDIN_CLIENT_ID")
     linkedin_client_secret: str | None = Field(default=None, alias="LINKEDIN_CLIENT_SECRET")
     linkedin_redirect_uri: str | None = Field(default=None, alias="LINKEDIN_REDIRECT_URI")
+    frontend_app_url: str = Field(default="http://localhost:5173", alias="FRONTEND_APP_URL")
 
     social_token_encryption_key: str | None = Field(default=None, alias="SOCIAL_TOKEN_ENCRYPTION_KEY")
     social_mock_mode: bool = Field(default=False, alias="SOCIAL_MOCK_MODE")

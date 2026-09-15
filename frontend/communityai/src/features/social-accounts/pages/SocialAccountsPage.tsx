@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 
@@ -8,7 +9,16 @@ export function SocialAccountsPage() {
   const { accessToken } = useAuth()
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
+  const [successMessage, setSuccessMessage] = useState('')
   const errorParam = searchParams.get('error')
+
+  useEffect(() => {
+    const demoConnection = sessionStorage.getItem('social-demo-connection')
+    if (demoConnection) {
+      sessionStorage.removeItem('social-demo-connection')
+      setSuccessMessage(`${demoConnection} connecté en mode démonstration.`)
+    }
+  }, [])
 
   // Fetch social accounts
   const { data: accounts, isLoading, error } = useQuery({
@@ -20,14 +30,28 @@ export function SocialAccountsPage() {
     enabled: !!accessToken,
   })
 
+  const { data: connectionMode } = useQuery({
+    queryKey: ['social-connection-mode'],
+    queryFn: () => {
+      if (!accessToken) throw new Error('Not authenticated')
+      return socialApi.getSocialConnectionMode(accessToken)
+    },
+    enabled: !!accessToken,
+  })
+
   // Mutation to connect a platform (triggers redirect to provider)
   const connectMutation = useMutation({
     mutationFn: (platform: string) => {
       if (!accessToken) throw new Error('Not authenticated')
       return socialApi.getConnectUrl(accessToken, platform)
     },
-    onSuccess: (data) => {
-      // Redirect to provider OAuth or mock callback URL
+    onSuccess: (data, platform) => {
+      if (connectionMode?.mock_mode) {
+        sessionStorage.setItem(
+          'social-demo-connection',
+          platform === 'meta' ? 'Meta' : 'LinkedIn',
+        )
+      }
       window.location.href = data.url
     },
   })
@@ -94,10 +118,35 @@ export function SocialAccountsPage() {
         <h1>Social Accounts</h1>
         <p className="page-subtitle">Connect and manage your social network profiles.</p>
 
+        {connectionMode?.mock_mode && (
+          <div className="social-mode-banner">
+            <strong>Mode démonstration activé</strong>
+            <span>Les comptes affichés et les connexions sont simulés. Désactivez SOCIAL_MOCK_MODE pour utiliser OAuth réel.</span>
+          </div>
+        )}
+
         {errorParam && (
           <div className="error-banner">
             <span className="error-message">Connection failed: {decodeURIComponent(errorParam)}</span>
             <button type="button" onClick={clearError} className="error-dismiss">
+              &times;
+            </button>
+          </div>
+        )}
+
+        {connectMutation.isError && (
+          <div className="error-banner">
+            <span className="error-message">{(connectMutation.error as Error).message}</span>
+            <button type="button" onClick={() => connectMutation.reset()} className="error-dismiss">
+              &times;
+            </button>
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="success-banner">
+            <span className="success-message">{successMessage}</span>
+            <button type="button" onClick={() => setSuccessMessage('')} className="error-dismiss">
               &times;
             </button>
           </div>
@@ -119,7 +168,7 @@ export function SocialAccountsPage() {
                 disabled={connectMutation.isPending}
                 className="connect-btn btn-meta"
               >
-                {connectMutation.isPending ? 'Connecting...' : 'Connect Meta'}
+                {connectMutation.isPending ? 'Connecting...' : connectionMode?.mock_mode ? 'Connect Meta (démo)' : 'Connect Meta'}
               </button>
             </div>
 
@@ -135,7 +184,7 @@ export function SocialAccountsPage() {
                 disabled={connectMutation.isPending}
                 className="connect-btn btn-linkedin"
               >
-                {connectMutation.isPending ? 'Connecting...' : 'Connect LinkedIn'}
+                {connectMutation.isPending ? 'Connecting...' : connectionMode?.mock_mode ? 'Connect LinkedIn (démo)' : 'Connect LinkedIn'}
               </button>
             </div>
           </div>
