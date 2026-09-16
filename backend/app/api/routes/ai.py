@@ -32,7 +32,10 @@ def generate_post(
     except AIProviderError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI service unavailable",
+        ) from exc
 
 
 @router.post("/rewrite", response_model=AIResponse)
@@ -46,7 +49,10 @@ def rewrite_content(
     except AIProviderError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI service unavailable",
+        ) from exc
 
 
 @router.post("/improve", response_model=AIResponse)
@@ -60,7 +66,10 @@ def improve_content(
     except AIProviderError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI service unavailable",
+        ) from exc
 
 
 @router.post("/shorten", response_model=AIResponse)
@@ -74,7 +83,10 @@ def shorten_content(
     except AIProviderError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI service unavailable",
+        ) from exc
 
 
 @router.post("/expand", response_model=AIResponse)
@@ -88,7 +100,10 @@ def expand_content(
     except AIProviderError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI service unavailable",
+        ) from exc
 
 
 @router.post("/change-tone", response_model=AIResponse)
@@ -102,7 +117,10 @@ def change_tone(
     except AIProviderError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI service unavailable",
+        ) from exc
 
 
 @router.post("/adapt-platform", response_model=AIResponse)
@@ -116,7 +134,10 @@ def adapt_platform(
     except AIProviderError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI service unavailable",
+        ) from exc
 
 
 @router.post("/ideas", response_model=AIResponse)
@@ -130,4 +151,7 @@ def generate_ideas(
     except AIProviderError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI service unavailable",
+        ) from exc

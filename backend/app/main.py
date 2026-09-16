@@ -5,11 +5,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.core.config import get_settings
+from app.core.encryption import validate_encryption_key
 from app.core.logging import configure_logging
 
 configure_logging()
 
 settings = get_settings()
+validate_encryption_key()
 
 app = FastAPI(
     title=settings.app_name,

@@ -222,3 +222,22 @@ def test_ai_provider_error_handling(monkeypatch):
         service.generate_post(req)
     assert exc_info.value.status_code == 504
     assert "upstream timeout" in exc_info.value.message
+
+
+def test_ai_unexpected_errors_do_not_reach_api_response(client, db_session: Session, monkeypatch):
+    token, _ = _setup_user(client, db_session, "ai_error@example.com")
+
+    class BrokenAIService:
+        def generate_post(self, payload):
+            raise RuntimeError("internal provider secret")
+
+    monkeypatch.setattr("app.api.routes.ai.AIService", BrokenAIService)
+    response = client.post(
+        "/api/v1/ai/generate",
+        json={"prompt": "Write a post", "tone": "PROFESSIONAL"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "AI service unavailable"}
+    assert "internal provider secret" not in response.text

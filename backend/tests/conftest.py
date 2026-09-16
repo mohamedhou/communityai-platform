@@ -12,6 +12,10 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key")
+os.environ.setdefault(
+    "SOCIAL_TOKEN_ENCRYPTION_KEY",
+    "G3cZ84fJd9X2-vK8pQLt8G3cZ84fJd9X2-vK8pQLt8E=",
+)
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:

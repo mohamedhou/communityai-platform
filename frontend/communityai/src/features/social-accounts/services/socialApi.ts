@@ -56,6 +56,7 @@ export interface SocialConnectionMode {
   mock_mode: boolean
   meta_configured: boolean
   linkedin_configured: boolean
+  encryption_key_configured: boolean
 }
 
 export function getSocialConnectionMode(accessToken: string): Promise<SocialConnectionMode> {

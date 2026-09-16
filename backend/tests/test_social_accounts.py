@@ -8,7 +8,7 @@ os.environ["SOCIAL_MOCK_MODE"] = "true"
 
 from sqlalchemy.orm import Session
 
-from app.core.encryption import encrypt_token, decrypt_token
+from app.core.encryption import encrypt_token, decrypt_token, validate_encryption_key
 from app.core.config import get_settings
 from app.models.user import User
 from app.social.models import OAuthState, SocialAccount, SocialAccountStatus
@@ -263,7 +263,8 @@ def test_real_mode_requires_configuration_and_generates_provider_url(client):
         os.environ["SOCIAL_MOCK_MODE"] = "false"
         for key in old_values:
             if key != "SOCIAL_MOCK_MODE":
-                os.environ.pop(key, None)
+                # Empty environment values override any repository .env values.
+                os.environ[key] = ""
         get_settings.cache_clear()
         client.post("/api/v1/auth/register", json=_register_payload("real-mode@example.com"))
         token = _login(client, email="real-mode@example.com").json()["access_token"]
@@ -288,4 +289,98 @@ def test_real_mode_requires_configuration_and_generates_provider_url(client):
                 os.environ.pop(key, None)
             else:
                 os.environ[key] = value
+        get_settings.cache_clear()
+
+
+def test_real_mode_keeps_meta_and_linkedin_configuration_isolated(client, db_session: Session):
+    keys = (
+        "SOCIAL_MOCK_MODE",
+        "META_CLIENT_ID",
+        "META_CLIENT_SECRET",
+        "META_REDIRECT_URI",
+        "LINKEDIN_CLIENT_ID",
+        "LINKEDIN_CLIENT_SECRET",
+        "LINKEDIN_REDIRECT_URI",
+    )
+    old_values = {key: os.environ.get(key) for key in keys}
+    try:
+        os.environ.update({
+            "SOCIAL_MOCK_MODE": "false",
+            "META_CLIENT_ID": "meta-test-client",
+            "META_CLIENT_SECRET": "meta-test-secret",
+            "META_REDIRECT_URI": "http://localhost:8000/api/v1/social-accounts/meta/callback",
+            "LINKEDIN_CLIENT_ID": "linkedin-test-client",
+            "LINKEDIN_CLIENT_SECRET": "linkedin-test-secret",
+            "LINKEDIN_REDIRECT_URI": "http://localhost:8000/api/v1/social-accounts/linkedin/callback",
+        })
+        get_settings.cache_clear()
+
+        client.post("/api/v1/auth/register", json=_register_payload("isolated-oauth@example.com"))
+        token = _login(client, email="isolated-oauth@example.com").json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        status_response = client.get("/api/v1/social-accounts/config-status", headers=headers)
+        assert status_response.status_code == 200
+        assert status_response.json() == {
+            "mock_mode": False,
+            "meta_configured": True,
+            "linkedin_configured": True,
+            "encryption_key_configured": True,
+        }
+        assert "secret" not in status_response.text.lower()
+        assert "meta-test-secret" not in status_response.text
+        assert "linkedin-test-secret" not in status_response.text
+
+        meta_response = client.get("/api/v1/social-accounts/meta/connect", headers=headers)
+        linkedin_response = client.get("/api/v1/social-accounts/linkedin/connect", headers=headers)
+        assert meta_response.status_code == 200
+        assert linkedin_response.status_code == 200
+
+        meta_url = meta_response.json()["url"]
+        linkedin_url = linkedin_response.json()["url"]
+        assert "facebook.com" in meta_url
+        assert "meta-test-client" in meta_url
+        assert "linkedin-test-client" not in meta_url
+        assert "linkedin.com" in linkedin_url
+        assert "linkedin-test-client" in linkedin_url
+        assert "meta-test-client" not in linkedin_url
+
+        os.environ["META_CLIENT_ID"] = ""
+        os.environ["META_CLIENT_SECRET"] = ""
+        get_settings.cache_clear()
+        missing_meta = client.get("/api/v1/social-accounts/meta/connect", headers=headers)
+        assert missing_meta.status_code == 502
+        assert missing_meta.json()["detail"] == "Meta OAuth is not configured"
+
+        os.environ["LINKEDIN_CLIENT_ID"] = ""
+        os.environ["LINKEDIN_CLIENT_SECRET"] = ""
+        get_settings.cache_clear()
+        missing_linkedin = client.get("/api/v1/social-accounts/linkedin/connect", headers=headers)
+        assert missing_linkedin.status_code == 502
+        assert missing_linkedin.json()["detail"] == "LinkedIn OAuth is not configured"
+    finally:
+        for key, value in old_values.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        get_settings.cache_clear()
+
+
+def test_invalid_encryption_key_is_rejected_without_exposing_value(monkeypatch):
+    old_key = os.environ.get("SOCIAL_TOKEN_ENCRYPTION_KEY")
+    os.environ["SOCIAL_TOKEN_ENCRYPTION_KEY"] = "invalid-fernet-key"
+    get_settings.cache_clear()
+    try:
+        try:
+            validate_encryption_key()
+            raise AssertionError("Expected invalid Fernet key to be rejected")
+        except ValueError as exc:
+            assert str(exc) == "SOCIAL_TOKEN_ENCRYPTION_KEY is invalid"
+            assert "invalid-fernet-key" not in str(exc)
+    finally:
+        if old_key is None:
+            os.environ.pop("SOCIAL_TOKEN_ENCRYPTION_KEY", None)
+        else:
+            os.environ["SOCIAL_TOKEN_ENCRYPTION_KEY"] = old_key
         get_settings.cache_clear()

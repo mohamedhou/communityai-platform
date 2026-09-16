@@ -29,39 +29,40 @@ The exact redirect URIs must match all three places: `.env`, the authorization r
 
 ## Meta Developer Setup
 
-1. Create or sign in to [Meta for Developers](https://developers.facebook.com/).
-2. Create a Meta application and record its App ID and App Secret.
-3. Add and configure the Meta products and permissions required by the current Page and Instagram Graph API access in the Meta dashboard. Availability depends on the app mode, app review, business assets, and the account being connected.
-4. Configure the app's OAuth redirect settings.
-5. Register this exact redirect URI:
+Official references: [Meta Login manual flow](https://developers.facebook.com/docs/facebook-login/guides/advanced/manual-flow/), [Pages API getting started](https://developers.facebook.com/docs/pages-api/get-started), and [Instagram API getting started](https://developers.facebook.com/docs/instagram-api/getting-started).
+
+1. Create or sign in to [Meta for Developers](https://developers.facebook.com/), open **My Apps**, and create an application. The exact creation flow and product names can vary by Meta dashboard version.
+2. Open the application dashboard. The App ID shown in the app settings is the OAuth client ID; record it for `META_CLIENT_ID`. Reveal the App Secret from the app's basic settings and store it only as `META_CLIENT_SECRET` in the local `.env`.
+3. Add the login product used by the app. In the application dashboard, open **Facebook Login > Settings**, then add the callback under **Client OAuth Settings > Valid OAuth Redirect URIs**. Register this exact redirect URI:
 
    `http://localhost:8000/api/v1/social-accounts/meta/callback`
 
-6. Put the App ID in `META_CLIENT_ID` and the App Secret in `META_CLIENT_SECRET`, only in the local `.env`.
-7. Set `META_GRAPH_API_VERSION` to a currently supported Graph API version for the products enabled in the Meta dashboard. The application sends this value to the authorization, token, Page, and Instagram Graph endpoints.
-8. Ensure the user can access the Facebook Page. The implementation requests authorized Pages and checks each Page for an eligible `instagram_business_account`.
-9. Ensure the Instagram account is a Professional account connected to an eligible Facebook Page. Meta controls final eligibility and permissions.
-10. Set `SOCIAL_MOCK_MODE=false` and restart the backend.
+4. Ensure the app has access to the Page and Instagram Graph API capabilities needed by this implementation. The authorization request asks for `pages_show_list`, `pages_read_engagement`, `instagram_basic`, and `instagram_manage_insights`; Meta may require products, permissions, business verification, App Review, or development-mode roles before these can be used outside the app's test roles.
+5. Ensure the person authorizing the app has access to the target Facebook Page. The callback flow calls the Pages API, then checks each returned Page for an `instagram_business_account`.
+6. For Instagram results, use an Instagram Professional account connected to an eligible Facebook Page. Personal Instagram accounts are not sufficient for this Page-linked Graph API flow. Meta controls the final eligibility and permission requirements.
+7. Set `META_GRAPH_API_VERSION` to a currently supported Graph API version for the products enabled in the Meta dashboard. If it is blank, the application configuration default is used; keep the version aligned with Meta's supported Graph API versions.
+8. Put the App ID and App Secret only in the local `.env`, set `SOCIAL_MOCK_MODE=false`, and restart Docker.
 
 The application uses the current configured Graph API version and stores only Page/Instagram metadata plus encrypted provider credentials. Meta developer products and permissions can change; follow the current Meta documentation for the exact dashboard labels and review requirements.
 
 ## LinkedIn Developer Setup
 
-1. Create or sign in to [LinkedIn Developers](https://www.linkedin.com/developers/).
-2. Create an application and open its **Auth** configuration.
-3. Add this exact Authorized Redirect URL:
+Official references: [LinkedIn 3-legged OAuth](https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow) and [Sign In with LinkedIn using OpenID Connect](https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/sign-in-with-linkedin-v2).
+
+1. Create or sign in to [LinkedIn Developers](https://www.linkedin.com/developers/), open **My apps**, and create an application.
+2. In the application **Auth** tab, copy the displayed API key/Client ID to `LINKEDIN_CLIENT_ID`. Copy the Client Secret to `LINKEDIN_CLIENT_SECRET` and keep it only in the local `.env`.
+3. In the same **Auth** tab, add this exact Authorized Redirect URL:
 
    `http://localhost:8000/api/v1/social-accounts/linkedin/callback`
 
-4. Enable the LinkedIn products required by the capabilities you use. OpenID Connect must be available for member identity. Enable **Share on LinkedIn** if posting requires `w_member_social`.
-5. Copy the application Client ID to `LINKEDIN_CLIENT_ID` and Client Secret to `LINKEDIN_CLIENT_SECRET`, only in the local `.env`.
+4. In the **Products** tab, request or enable **Sign In with LinkedIn using OpenID Connect**. This provides the `openid`, `profile`, and `email` scopes and supports the application's `userinfo` lookup.
+5. Enable or request **Share on LinkedIn** if posting is required. The `w_member_social` scope is available only when the corresponding product or partner access is provisioned for the application.
 6. CommunityAI requests these scopes:
 
    `openid profile email w_member_social`
 
    The final set available to an application depends on the products and permissions approved in the LinkedIn Developer Portal.
-7. Set `LINKEDIN_REDIRECT_URI` to the exact URI above.
-8. Set `SOCIAL_MOCK_MODE=false` and restart the backend.
+7. Set `LINKEDIN_REDIRECT_URI` to the exact URI above, set `SOCIAL_MOCK_MODE=false`, and restart the backend.
 
 The current implementation uses LinkedIn OAuth 2.0 authorization code flow, the access-token endpoint, and the OpenID Connect `userinfo` endpoint. LinkedIn product access and API permissions are controlled by LinkedIn and cannot be bypassed by the application.
 

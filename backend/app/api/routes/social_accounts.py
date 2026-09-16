@@ -7,6 +7,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user, get_db
+from app.core.encryption import is_encryption_key_valid
 from app.models.user import User
 from app.schemas.social_account import SocialAccountResponse
 from app.services.social_account_service import SocialAccountService
@@ -26,6 +27,7 @@ def _safe_configuration_status() -> dict[str, object]:
         "linkedin_configured": bool(
             settings.linkedin_client_id and settings.linkedin_client_secret and settings.linkedin_redirect_uri
         ),
+        "encryption_key_configured": is_encryption_key_valid(settings),
     }
 
 

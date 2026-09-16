@@ -12,12 +12,16 @@ Implemented now:
 - Refresh token flow with server-side revocation
 - Protected route `/api/v1/auth/me`
 - Basic RBAC checks
+- Social account connections for Meta and LinkedIn, including mock mode
+- Post drafts, scheduling, publishing, and calendar workflows
+- AI assistant actions with mock and configurable provider support
+- Unified inbox with AI reply suggestions and manual replies
+- Analytics, reporting exports, notifications, and user settings
 
-Not implemented yet:
+Out of scope for this MVP:
 
 - MFA, WebAuthn, SSO
-- Social OAuth providers (Google, Microsoft, Meta, LinkedIn)
-- Social publishing, calendar, inbox, analytics, AI assistant business features
+- Additional social providers such as Google and Microsoft
 
 ## Canonical frontend
 
@@ -53,8 +57,21 @@ Core variables:
 - `REFRESH_COOKIE_SECURE`
 - `REFRESH_COOKIE_SAMESITE`
 - `REFRESH_COOKIE_PATH`
+- `SOCIAL_MOCK_MODE`
+- `SOCIAL_TOKEN_ENCRYPTION_KEY`
+- `META_CLIENT_ID`, `META_CLIENT_SECRET`, `META_REDIRECT_URI`
+- `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_REDIRECT_URI`
+- `FRONTEND_APP_URL`
 
 Never commit a real `.env` file.
+
+Generate a valid Fernet encryption key locally with:
+
+```powershell
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Place the generated value in local `.env` as `SOCIAL_TOKEN_ENCRYPTION_KEY`.
 
 ## Authentication strategy
 
@@ -102,6 +119,12 @@ Docker Compose:
 docker compose up --build
 ```
 
+The backend applies pending Alembic migrations before starting the API.
+
+OAuth setup, mock mode, and the manual provider checklist are documented in
+[docs/social-oauth-setup.md](docs/social-oauth-setup.md) and
+[docs/manual-social-oauth-test.md](docs/manual-social-oauth-test.md).
+
 Manual backend:
 
 ```powershell
@@ -130,4 +153,5 @@ python -m compileall backend/app
 cd backend; pytest
 cd ../frontend/communityai; npm run build
 cd ../..; docker compose config
+cd backend; python -m alembic heads
 ```
