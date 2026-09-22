@@ -18,6 +18,7 @@ class NotificationType(StrEnum):
     SOCIAL_ACCOUNT = "SOCIAL_ACCOUNT"
     ANALYTICS = "ANALYTICS"
     SYSTEM = "SYSTEM"
+    WORKSPACE = "WORKSPACE"
 
 
 class NotificationSeverity(StrEnum):

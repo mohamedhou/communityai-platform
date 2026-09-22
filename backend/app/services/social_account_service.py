@@ -27,7 +27,7 @@ class SocialAccountService:
         else:
             raise ValueError(f"Unknown social platform: {platform_or_provider}")
 
-    def create_authorization_url(self, user_id: int, platform: str) -> str:
+    def create_authorization_url(self, user_id: int, platform: str, workspace_id: int | None = None) -> str:
         normalized_platform = platform.lower().strip()
         provider = self.get_provider(normalized_platform)
 
@@ -38,10 +38,11 @@ class SocialAccountService:
         # initiation must not leave an unusable OAuth state in the database.
         authorization_url = provider.get_authorization_url(state_str)
 
-        # 2. Save it in database with user_id and expiration (10 minutes)
+        # 2. Save it in database with user_id, workspace_id and expiration (10 minutes)
         oauth_state = OAuthState(
             state=state_str,
             user_id=user_id,
+            workspace_id=workspace_id,
             expires_at=datetime.now(UTC) + timedelta(minutes=10),
         )
         self.db.add(oauth_state)
@@ -53,6 +54,13 @@ class SocialAccountService:
         normalized_platform = platform.lower().strip()
         # Validate the provider binding before calling an external provider.
         user_id, oauth_state = self.validate_state(state, expected_provider=normalized_platform)
+        workspace_id = oauth_state.workspace_id
+        if workspace_id is None:
+            from app.services.workspace_service import WorkspaceService
+            user = self.db.get(User, user_id)
+            if user:
+                membership = WorkspaceService(self.db).get_or_create_default_workspace(user)
+                workspace_id = membership.workspace_id
 
         # 2. Get provider
         provider = self.get_provider(normalized_platform)
@@ -71,9 +79,9 @@ class SocialAccountService:
             encrypted_access = encrypt_token(info.access_token)
             encrypted_refresh = encrypt_token(info.refresh_token)
 
-            # 6. Check if account already connected for this user and platform
+            # 6. Check if account already connected for this workspace and platform
             stmt = select(SocialAccount).where(
-                SocialAccount.user_id == user_id,
+                SocialAccount.workspace_id == workspace_id,
                 SocialAccount.platform == info.platform,
                 SocialAccount.external_account_id == info.external_account_id,
             )
@@ -83,6 +91,7 @@ class SocialAccountService:
             provider_name = "meta" if info.platform in ("facebook", "instagram") else "linkedin"
 
             if existing_account:
+                existing_account.user_id = user_id
                 existing_account.account_name = info.account_name
                 existing_account.account_username = info.account_username
                 existing_account.profile_image_url = info.profile_image_url
@@ -95,6 +104,7 @@ class SocialAccountService:
                 connected_accounts.append(existing_account)
             else:
                 new_account = SocialAccount(
+                    workspace_id=workspace_id,
                     user_id=user_id,
                     platform=info.platform,
                     provider=provider_name,
@@ -119,20 +129,22 @@ class SocialAccountService:
             self.db.refresh(acc)
         return connected_accounts
 
-    def list_accounts(self, user_id: int) -> list[SocialAccount]:
-        stmt = select(SocialAccount).where(SocialAccount.user_id == user_id).order_by(SocialAccount.id)
+    def list_accounts(self, workspace_id: int) -> list[SocialAccount]:
+        stmt = select(SocialAccount).where(SocialAccount.workspace_id == workspace_id).order_by(SocialAccount.id)
         return list(self.db.execute(stmt).scalars().all())
 
-    def get_account_by_id(self, account_id: int) -> SocialAccount:
-        stmt = select(SocialAccount).where(SocialAccount.id == account_id)
-        account = self.db.execute(stmt).scalar_one_or_none()
+    def get_account_by_id(self, account_id: int, workspace_id: int | None = None) -> SocialAccount:
+        account = self.db.get(SocialAccount, account_id)
         if not account:
             raise ValueError("account_not_found")
+        if workspace_id is not None and account.workspace_id != workspace_id:
+            raise PermissionError("not_authorized")
         return account
 
-    def disconnect_account(self, user_id: int, account_id: int) -> None:
-        account = self.get_account_by_id(account_id)
-        if account.user_id != user_id:
+
+    def disconnect_account(self, workspace_id: int, account_id: int) -> None:
+        account = self.get_account_by_id(account_id, workspace_id=workspace_id)
+        if account.workspace_id != workspace_id:
             raise PermissionError("not_authorized")
 
         # Try to revoke credentials on the provider side
@@ -148,9 +160,9 @@ class SocialAccountService:
         self.db.delete(account)
         self.db.commit()
 
-    def refresh_account_token(self, user_id: int, account_id: int) -> SocialAccount:
-        account = self.get_account_by_id(account_id)
-        if account.user_id != user_id:
+    def refresh_account_token(self, workspace_id: int, account_id: int) -> SocialAccount:
+        account = self.get_account_by_id(account_id, workspace_id=workspace_id)
+        if account.workspace_id != workspace_id:
             raise PermissionError("not_authorized")
 
         decrypted_refresh = decrypt_token(account.refresh_token_encrypted)

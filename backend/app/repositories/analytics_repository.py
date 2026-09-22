@@ -12,14 +12,14 @@ from app.social.models import SocialAccount
 
 
 class AnalyticsRepository:
-    def get_user_social_accounts(
+    def get_workspace_social_accounts(
         self,
         db: Session,
-        user_id: int,
+        workspace_id: int,
         social_account_id: int | None = None,
         platform: str | None = None,
     ) -> list[SocialAccount]:
-        query = select(SocialAccount).where(SocialAccount.user_id == user_id)
+        query = select(SocialAccount).where(SocialAccount.workspace_id == workspace_id)
         if social_account_id is not None:
             query = query.where(SocialAccount.id == social_account_id)
         if platform:
@@ -32,10 +32,27 @@ class AnalyticsRepository:
             )
         return list(db.scalars(query).all())
 
-    def get_snapshots(
+    # Compatibility alias
+    def get_user_social_accounts(
         self,
         db: Session,
         user_id: int,
+        social_account_id: int | None = None,
+        platform: str | None = None,
+    ) -> list[SocialAccount]:
+        from app.services.workspace_service import WorkspaceService
+        from app.models.user import User
+
+        user = db.get(User, user_id)
+        if user:
+            ws_id = WorkspaceService(db).get_or_create_default_workspace(user).workspace_id
+            return self.get_workspace_social_accounts(db, ws_id, social_account_id, platform)
+        return []
+
+    def get_snapshots(
+        self,
+        db: Session,
+        workspace_id: int,
         social_account_id: int | None = None,
         platform: str | None = None,
         start_date: date | None = None,
@@ -44,7 +61,7 @@ class AnalyticsRepository:
         query = (
             select(AnalyticsSnapshot)
             .options(joinedload(AnalyticsSnapshot.social_account))
-            .where(AnalyticsSnapshot.user_id == user_id)
+            .where(AnalyticsSnapshot.workspace_id == workspace_id)
         )
 
         if social_account_id is not None:
@@ -76,7 +93,7 @@ class AnalyticsRepository:
     def get_top_posts(
         self,
         db: Session,
-        user_id: int,
+        workspace_id: int,
         social_account_id: int | None = None,
         platform: str | None = None,
         start_date: date | None = None,
@@ -86,7 +103,7 @@ class AnalyticsRepository:
         query = (
             select(Post)
             .options(joinedload(Post.social_account))
-            .where(Post.user_id == user_id)
+            .where(Post.workspace_id == workspace_id)
         )
 
         if social_account_id is not None:
@@ -112,7 +129,6 @@ class AnalyticsRepository:
         # Generate coherent metrics for posts
         top_metrics: list[TopPostMetric] = []
         for p in posts:
-            # Deterministic calculation based on post attributes
             seed_val = (p.id * 17 + len(p.content) * 3) % 100
             reach = 850 + seed_val * 45
             impressions = int(reach * 1.4)
@@ -145,7 +161,6 @@ class AnalyticsRepository:
                 )
             )
 
-        # Sort by total engagement descending
         top_metrics.sort(key=lambda x: x.engagement, reverse=True)
         return top_metrics[:limit]
 
@@ -155,9 +170,11 @@ class AnalyticsRepository:
         user_id: int,
         social_account: SocialAccount,
         days: int = 30,
+        workspace_id: int | None = None,
     ) -> list[AnalyticsSnapshot]:
         end = date.today()
         start = end - timedelta(days=days - 1)
+        ws_id = workspace_id or social_account.workspace_id
 
         # Base numbers by platform
         is_meta = "meta" in (social_account.provider or "").lower() or "facebook" in (social_account.platform or "").lower()
@@ -167,7 +184,6 @@ class AnalyticsRepository:
         created = []
         current_followers = base_followers
 
-        # Check existing snapshots to avoid duplicates
         existing_dates = set(
             db.scalars(
                 select(AnalyticsSnapshot.date).where(
@@ -183,21 +199,17 @@ class AnalyticsRepository:
             if cur_date in existing_dates:
                 continue
 
-            day_of_week = cur_date.weekday()  # 0 is Mon, 6 is Sun
-            # Plausible weekday vs weekend curve
+            day_of_week = cur_date.weekday()
             is_weekend = day_of_week >= 5
             growth = growth_step + (i % 5) - (2 if is_weekend else 0)
             if growth < 1:
                 growth = 1
 
             current_followers += growth
-
-            # Reach & Impressions
             reach_base = 1400 if is_meta else 800
             reach = reach_base + (i % 6) * 120 + (i * 10) - (250 if is_weekend else 0)
             impressions = int(reach * (1.35 if is_meta else 1.28))
 
-            # Engagement breakdown (correlated with reach)
             likes = int(reach * 0.045) + (i % 4) * 3
             comments = int(likes * 0.22) + (i % 3) * 2
             shares = int(likes * 0.10) + (i % 2) * 2
@@ -206,6 +218,7 @@ class AnalyticsRepository:
             posts_pub = 1 if (i % 3 == 0 and not is_weekend) else 0
 
             snapshot = AnalyticsSnapshot(
+                workspace_id=ws_id,
                 user_id=user_id,
                 social_account_id=social_account.id,
                 date=cur_date,

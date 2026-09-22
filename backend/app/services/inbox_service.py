@@ -33,7 +33,7 @@ class InboxService:
     def list_messages(
         self,
         db: Session,
-        user_id: int,
+        workspace_id: int,
         type: InboxMessageType | None = None,
         platform: str | None = None,
         sentiment: InboxSentiment | None = None,
@@ -45,7 +45,7 @@ class InboxService:
     ) -> InboxListResponse:
         items, total = self.repository.list_messages(
             db=db,
-            user_id=user_id,
+            workspace_id=workspace_id,
             type=type,
             platform=platform,
             sentiment=sentiment,
@@ -55,19 +55,19 @@ class InboxService:
             limit=limit,
             offset=offset,
         )
-        unread_count = self.repository.count_unread(db=db, user_id=user_id)
+        unread_count = self.repository.count_unread(db=db, workspace_id=workspace_id)
         return InboxListResponse(
             items=[InboxMessageResponse.model_validate(item) for item in items],
             total=total,
             unread_count=unread_count,
         )
 
-    def get_unread_count(self, db: Session, user_id: int) -> InboxUnreadCountResponse:
-        unread_count = self.repository.count_unread(db=db, user_id=user_id)
+    def get_unread_count(self, db: Session, workspace_id: int) -> InboxUnreadCountResponse:
+        unread_count = self.repository.count_unread(db=db, workspace_id=workspace_id)
         return InboxUnreadCountResponse(unread_count=unread_count)
 
-    def get_message_by_id(self, db: Session, message_id: int, user_id: int) -> InboxMessage:
-        message = self.repository.get_by_id(db=db, message_id=message_id, user_id=user_id)
+    def get_message_by_id(self, db: Session, message_id: int, workspace_id: int) -> InboxMessage:
+        message = self.repository.get_by_id(db=db, message_id=message_id, workspace_id=workspace_id)
         if not message:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -75,22 +75,22 @@ class InboxService:
             )
         return message
 
-    def mark_read(self, db: Session, message_id: int, user_id: int, is_read: bool = True) -> InboxMessage:
-        message = self.get_message_by_id(db=db, message_id=message_id, user_id=user_id)
+    def mark_read(self, db: Session, message_id: int, workspace_id: int, is_read: bool = True) -> InboxMessage:
+        message = self.get_message_by_id(db=db, message_id=message_id, workspace_id=workspace_id)
         return self.repository.update(db=db, db_obj=message, update_dict={"is_read": is_read})
 
-    def mark_resolved(self, db: Session, message_id: int, user_id: int, is_resolved: bool = True) -> InboxMessage:
-        message = self.get_message_by_id(db=db, message_id=message_id, user_id=user_id)
+    def mark_resolved(self, db: Session, message_id: int, workspace_id: int, is_resolved: bool = True) -> InboxMessage:
+        message = self.get_message_by_id(db=db, message_id=message_id, workspace_id=workspace_id)
         return self.repository.update(db=db, db_obj=message, update_dict={"is_resolved": is_resolved})
 
     def suggest_reply(
         self,
         db: Session,
         message_id: int,
-        user_id: int,
+        workspace_id: int,
         req: InboxSuggestReplyRequest,
     ) -> AIResponse:
-        message = self.get_message_by_id(db=db, message_id=message_id, user_id=user_id)
+        message = self.get_message_by_id(db=db, message_id=message_id, workspace_id=workspace_id)
         platform_str = "social"
         if message.social_account:
             platform_str = message.social_account.platform or message.social_account.provider
@@ -109,17 +109,17 @@ class InboxService:
         self,
         db: Session,
         message_id: int,
-        user_id: int,
+        workspace_id: int,
         content: str,
     ) -> InboxMessage:
-        message = self.get_message_by_id(db=db, message_id=message_id, user_id=user_id)
+        message = self.get_message_by_id(db=db, message_id=message_id, workspace_id=workspace_id)
         social_account = message.social_account or db.get(SocialAccount, message.social_account_id)
         if not social_account:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Social account associated with interaction is missing",
             )
-        if social_account.user_id != user_id:
+        if social_account.workspace_id != workspace_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Interaction not found",
@@ -166,7 +166,7 @@ class InboxService:
         )
         return updated
 
-    def seed_mock(self, db: Session, user_id: int) -> list[InboxMessage]:
+    def seed_mock(self, db: Session, workspace_id: int, user_id: int) -> list[InboxMessage]:
         settings = get_settings()
         if not settings.social_mock_mode:
             raise HTTPException(
@@ -174,16 +174,17 @@ class InboxService:
                 detail="Mock mode is disabled",
             )
 
-        # Find or create a mock social account for this user
+        # Find or create a mock social account for this workspace
         account = (
             db.query(SocialAccount)
-            .filter(SocialAccount.user_id == user_id)
+            .filter(SocialAccount.workspace_id == workspace_id)
             .first()
         )
         if not account:
             from app.core.encryption import encrypt_token
 
             account = SocialAccount(
+                workspace_id=workspace_id,
                 user_id=user_id,
                 platform="facebook",
                 provider="meta",
@@ -202,10 +203,12 @@ class InboxService:
             db=db,
             user_id=user_id,
             social_account_id=account.id,
+            workspace_id=workspace_id,
         )
 
         try:
             from app.services.notification_service import NotificationService
+
             notif_service = NotificationService()
             for msg in created_items:
                 if not msg.is_read:

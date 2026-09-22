@@ -4,8 +4,11 @@ from datetime import date
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_user, get_db
-from app.models.user import User
+from app.api.dependencies import get_db
+from app.api.workspace_context import (
+    WorkspaceContext,
+    get_workspace_context,
+)
 from app.schemas.analytics import (
     AnalyticsSeedResponse,
     AnalyticsSummaryResponse,
@@ -25,12 +28,13 @@ def get_analytics_summary(
     start_date: date | None = Query(default=None),
     end_date: date | None = Query(default=None),
     days: int | None = Query(default=None, ge=1, le=365),
-    current_user: User = Depends(get_current_user),
+    context: WorkspaceContext = Depends(get_workspace_context),
     db: Session = Depends(get_db),
 ) -> AnalyticsSummaryResponse:
     return analytics_service.get_summary(
         db=db,
-        user_id=current_user.id,
+        workspace_id=context.workspace_id,
+        user_id=context.user.id,
         social_account_id=social_account_id,
         platform=platform,
         start_date=start_date,
@@ -46,12 +50,13 @@ def get_analytics_timeseries(
     start_date: date | None = Query(default=None),
     end_date: date | None = Query(default=None),
     days: int | None = Query(default=None, ge=1, le=365),
-    current_user: User = Depends(get_current_user),
+    context: WorkspaceContext = Depends(get_workspace_context),
     db: Session = Depends(get_db),
 ) -> AnalyticsTimeSeriesResponse:
     return analytics_service.get_time_series(
         db=db,
-        user_id=current_user.id,
+        workspace_id=context.workspace_id,
+        user_id=context.user.id,
         social_account_id=social_account_id,
         platform=platform,
         start_date=start_date,
@@ -67,12 +72,13 @@ def get_top_posts(
     start_date: date | None = Query(default=None),
     end_date: date | None = Query(default=None),
     limit: int = Query(default=10, ge=1, le=50),
-    current_user: User = Depends(get_current_user),
+    context: WorkspaceContext = Depends(get_workspace_context),
     db: Session = Depends(get_db),
 ) -> TopPostsResponse:
     return analytics_service.get_top_posts(
         db=db,
-        user_id=current_user.id,
+        workspace_id=context.workspace_id,
+        user_id=context.user.id,
         social_account_id=social_account_id,
         platform=platform,
         start_date=start_date,
@@ -84,11 +90,12 @@ def get_top_posts(
 @router.post("/seed-mock", response_model=AnalyticsSeedResponse, status_code=status.HTTP_201_CREATED)
 def seed_mock_analytics(
     days: int = Query(default=30, ge=1, le=90),
-    current_user: User = Depends(get_current_user),
+    context: WorkspaceContext = Depends(get_workspace_context),
     db: Session = Depends(get_db),
 ) -> AnalyticsSeedResponse:
     return analytics_service.seed_mock(
         db=db,
-        user_id=current_user.id,
+        workspace_id=context.workspace_id,
+        user_id=context.user.id,
         days=days,
     )

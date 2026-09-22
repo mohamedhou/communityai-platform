@@ -3,12 +3,15 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_user, get_db
-from app.models.user import User
+from app.api.dependencies import get_db
+from app.api.workspace_context import (
+    WorkspaceContext,
+    get_workspace_context,
+    require_workspace_editor,
+)
 from app.models.post import PostStatus
 from app.schemas.post import PostCreate, PostUpdate, PostResponse, PostScheduleRequest
 from app.services.post_service import PostService
-from app.social.exceptions import SocialProviderError
 
 router = APIRouter(prefix="/api/v1/posts", tags=["posts"])
 
@@ -16,13 +19,14 @@ router = APIRouter(prefix="/api/v1/posts", tags=["posts"])
 @router.post("", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
 def create_post(
     payload: PostCreate,
-    current_user: User = Depends(get_current_user),
+    context: WorkspaceContext = Depends(require_workspace_editor),
     db: Session = Depends(get_db),
 ) -> PostResponse:
     service = PostService(db)
     try:
         post = service.create_post(
-            user_id=current_user.id,
+            workspace_id=context.workspace_id,
+            user_id=context.user.id,
             social_account_id=payload.social_account_id,
             content=payload.content,
             media_url=payload.media_url,
@@ -41,30 +45,30 @@ def create_post(
     except PermissionError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not own this social account",
+            detail="Social account does not belong to your workspace",
         ) from exc
 
 
 @router.get("", response_model=list[PostResponse])
 def list_posts(
     status_filter: PostStatus | None = None,
-    current_user: User = Depends(get_current_user),
+    context: WorkspaceContext = Depends(get_workspace_context),
     db: Session = Depends(get_db),
 ) -> list[PostResponse]:
     service = PostService(db)
-    posts = service.list_posts(current_user.id, status=status_filter)
+    posts = service.list_posts(context.workspace_id, status=status_filter)
     return [PostResponse.model_validate(p) for p in posts]
 
 
 @router.get("/{post_id}", response_model=PostResponse)
 def get_post(
     post_id: int,
-    current_user: User = Depends(get_current_user),
+    context: WorkspaceContext = Depends(get_workspace_context),
     db: Session = Depends(get_db),
 ) -> PostResponse:
     service = PostService(db)
     try:
-        post = service.get_post_by_id(current_user.id, post_id)
+        post = service.get_post_by_id(context.workspace_id, post_id)
         return PostResponse.model_validate(post)
     except ValueError as exc:
         raise HTTPException(
@@ -74,7 +78,7 @@ def get_post(
     except PermissionError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not own this post",
+            detail="You do not have access to this post",
         ) from exc
 
 
@@ -82,13 +86,13 @@ def get_post(
 def update_post(
     post_id: int,
     payload: PostUpdate,
-    current_user: User = Depends(get_current_user),
+    context: WorkspaceContext = Depends(require_workspace_editor),
     db: Session = Depends(get_db),
 ) -> PostResponse:
     service = PostService(db)
     try:
         updated_post = service.update_post(
-            user_id=current_user.id,
+            workspace_id=context.workspace_id,
             post_id=post_id,
             content=payload.content,
             media_url=payload.media_url,
@@ -115,12 +119,12 @@ def update_post(
 @router.delete("/{post_id}", status_code=status.HTTP_200_OK)
 def delete_post(
     post_id: int,
-    current_user: User = Depends(get_current_user),
+    context: WorkspaceContext = Depends(require_workspace_editor),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
     service = PostService(db)
     try:
-        service.delete_post(current_user.id, post_id)
+        service.delete_post(context.workspace_id, post_id)
         return {"message": "Post deleted successfully"}
     except ValueError as exc:
         if str(exc) == "post_not_found":
@@ -135,19 +139,19 @@ def delete_post(
     except PermissionError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not own this post",
+            detail="You do not have access to this post",
         ) from exc
 
 
 @router.post("/{post_id}/publish", response_model=PostResponse)
 def publish_post(
     post_id: int,
-    current_user: User = Depends(get_current_user),
+    context: WorkspaceContext = Depends(require_workspace_editor),
     db: Session = Depends(get_db),
 ) -> PostResponse:
     service = PostService(db)
     try:
-        post = service.publish_post(current_user.id, post_id)
+        post = service.publish_post(context.workspace_id, post_id)
         if post.status == PostStatus.FAILED:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
@@ -175,12 +179,17 @@ def publish_post(
 def schedule_post(
     post_id: int,
     payload: PostScheduleRequest,
-    current_user: User = Depends(get_current_user),
+    context: WorkspaceContext = Depends(require_workspace_editor),
     db: Session = Depends(get_db),
 ) -> PostResponse:
     service = PostService(db)
     try:
-        post = service.schedule_post(current_user.id, post_id, payload.scheduled_at)
+        post = service.schedule_post(
+            context.workspace_id,
+            post_id,
+            payload.scheduled_at,
+            actor_user_id=context.user.id,
+        )
         return PostResponse.model_validate(post)
     except ValueError as exc:
         if str(exc) == "post_not_found":
@@ -195,19 +204,19 @@ def schedule_post(
     except PermissionError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not own this post",
+            detail="You do not have access to this post",
         ) from exc
 
 
 @router.post("/{post_id}/cancel", response_model=PostResponse)
 def cancel_post(
     post_id: int,
-    current_user: User = Depends(get_current_user),
+    context: WorkspaceContext = Depends(require_workspace_editor),
     db: Session = Depends(get_db),
 ) -> PostResponse:
     service = PostService(db)
     try:
-        post = service.cancel_post(current_user.id, post_id)
+        post = service.cancel_post(context.workspace_id, post_id)
         return PostResponse.model_validate(post)
     except ValueError as exc:
         if str(exc) == "post_not_found":
@@ -222,5 +231,5 @@ def cancel_post(
     except PermissionError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not own this post",
+            detail="You do not have access to this post",
         ) from exc

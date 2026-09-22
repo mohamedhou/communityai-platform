@@ -26,6 +26,7 @@ class InboxMessage(Base):
     __tablename__ = "inbox_messages"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    workspace_id: Mapped[int] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     social_account_id: Mapped[int] = mapped_column(
         ForeignKey("social_accounts.id", ondelete="CASCADE"), nullable=False, index=True
@@ -59,5 +60,6 @@ class InboxMessage(Base):
         nullable=False,
     )
 
+    workspace = relationship("Workspace")
     user = relationship("User")
     social_account = relationship("SocialAccount")

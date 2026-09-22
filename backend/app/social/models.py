@@ -20,6 +20,7 @@ class SocialAccount(Base):
     __tablename__ = "social_accounts"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    workspace_id: Mapped[int] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     platform: Mapped[str] = mapped_column(String(50), nullable=False)  # "facebook", "instagram", "linkedin"
     provider: Mapped[str] = mapped_column(String(50), nullable=False)  # "meta", "linkedin"
@@ -48,6 +49,7 @@ class SocialAccount(Base):
         nullable=False,
     )
 
+    workspace = relationship("Workspace")
     user = relationship("User", back_populates="social_accounts")
 
 
@@ -56,9 +58,12 @@ class OAuthState(Base):
 
     state: Mapped[str] = mapped_column(String(255), primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    workspace_id: Mapped[int | None] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
     )
+
+    workspace = relationship("Workspace")

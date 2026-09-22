@@ -5,6 +5,14 @@ from app.models.post import Post, PostStatus
 from app.models.inbox_message import InboxMessage, InboxMessageType, InboxSentiment
 from app.models.analytics_snapshot import AnalyticsSnapshot
 from app.models.user_settings import UserSettings
+from app.models.workspace import (
+    MembershipStatus,
+    Workspace,
+    WorkspaceActivity,
+    WorkspaceInvitation,
+    WorkspaceMember,
+    WorkspaceRole,
+)
 from app.social.models import SocialAccount, SocialAccountStatus, OAuthState
 
 __all__ = [
@@ -24,5 +32,11 @@ __all__ = [
     "NotificationType",
     "NotificationSeverity",
     "UserSettings",
+    "Workspace",
+    "WorkspaceMember",
+    "WorkspaceInvitation",
+    "WorkspaceActivity",
+    "WorkspaceRole",
+    "MembershipStatus",
 ]
 

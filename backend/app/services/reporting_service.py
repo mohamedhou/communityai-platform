@@ -20,27 +20,69 @@ class ReportingService:
     def __init__(self, analytics_service: AnalyticsService | None = None):
         self.analytics = analytics_service or AnalyticsService()
 
-    def build_preview(self, db: Session, user: User, request: ReportRequest) -> ReportPreviewResponse:
+    def build_preview(
+        self,
+        db: Session,
+        user: User,
+        request: ReportRequest,
+        workspace_id: int | None = None,
+    ) -> ReportPreviewResponse:
         self._validate_request(request)
+        if workspace_id is None:
+            from app.services.workspace_service import WorkspaceService
+
+            membership = WorkspaceService(db).get_or_create_default_workspace(user)
+            workspace_id = membership.workspace_id
+
         summary = self.analytics.get_summary(
-            db=db, user_id=user.id, social_account_id=request.social_account_id,
-            platform=request.platform, start_date=request.start_date, end_date=request.end_date,
+            db=db,
+            workspace_id=workspace_id,
+            user_id=user.id,
+            social_account_id=request.social_account_id,
+            platform=request.platform,
+            start_date=request.start_date,
+            end_date=request.end_date,
         )
         time_series = self.analytics.get_time_series(
-            db=db, user_id=user.id, social_account_id=request.social_account_id,
-            platform=request.platform, start_date=request.start_date, end_date=request.end_date,
+            db=db,
+            workspace_id=workspace_id,
+            user_id=user.id,
+            social_account_id=request.social_account_id,
+            platform=request.platform,
+            start_date=request.start_date,
+            end_date=request.end_date,
         )
         top_posts = self.analytics.get_top_posts(
-            db=db, user_id=user.id, social_account_id=request.social_account_id,
-            platform=request.platform, start_date=request.start_date, end_date=request.end_date, limit=10,
+            db=db,
+            workspace_id=workspace_id,
+            user_id=user.id,
+            social_account_id=request.social_account_id,
+            platform=request.platform,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            limit=10,
         )
         settings = SettingsRepository(db).get_by_user_id(user.id)
-        account_names = self.analytics.repository.get_user_social_accounts(
-            db=db, user_id=user.id, social_account_id=request.social_account_id, platform=request.platform,
+        if settings and settings.workspace_name:
+            workspace_name = settings.workspace_name
+        else:
+            from app.models.workspace import Workspace
+
+            workspace = db.get(Workspace, workspace_id) if workspace_id else None
+            if workspace and not workspace.name.endswith("'s Workspace"):
+                workspace_name = workspace.name
+            else:
+                workspace_name = f"{user.first_name} {user.last_name}".strip() or (workspace.name if workspace else "Workspace")
+
+        account_names = self.analytics.repository.get_workspace_social_accounts(
+            db=db,
+            workspace_id=workspace_id,
+            social_account_id=request.social_account_id,
+            platform=request.platform,
         )
         return ReportPreviewResponse(
             report_title="CommunityAI Performance Report",
-            workspace_name=settings.workspace_name if settings else f"{user.first_name} {user.last_name}",
+            workspace_name=workspace_name,
             period_start=summary.period_start,
             period_end=summary.period_end,
             platform=request.platform,

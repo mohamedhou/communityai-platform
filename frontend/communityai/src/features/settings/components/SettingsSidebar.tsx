@@ -1,12 +1,14 @@
-export type SettingsSection = 'profile' | 'security' | 'workspace' | 'notifications' | 'social'
+export type SettingsSection = 'profile' | 'security' | 'workspace' | 'team' | 'notifications' | 'social'
 
 const sections: Array<{ id: SettingsSection; label: string; icon: string }> = [
   { id: 'profile', label: 'Profile', icon: '◉' },
   { id: 'security', label: 'Security', icon: '⌑' },
   { id: 'workspace', label: 'Workspace', icon: '▦' },
+  { id: 'team', label: 'Team & Members', icon: '👥' },
   { id: 'notifications', label: 'Notifications', icon: '♧' },
   { id: 'social', label: 'Social Accounts', icon: '◎' },
 ]
+
 
 export function SettingsSidebar({ active, onChange }: { active: SettingsSection; onChange: (section: SettingsSection) => void }) {
   return (

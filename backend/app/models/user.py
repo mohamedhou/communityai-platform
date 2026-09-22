@@ -45,4 +45,5 @@ class User(Base):
     refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
     social_accounts = relationship("SocialAccount", back_populates="user", cascade="all, delete-orphan")
     settings = relationship("UserSettings", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    workspace_memberships = relationship("WorkspaceMember", foreign_keys="WorkspaceMember.user_id", cascade="all, delete-orphan")
 

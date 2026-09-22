@@ -42,33 +42,33 @@ class AnalyticsService:
     def _verify_social_account_ownership(
         self,
         db: Session,
-        user_id: int,
+        workspace_id: int,
         social_account_id: int | None,
     ) -> None:
         if social_account_id is None:
             return
         account = db.get(SocialAccount, social_account_id)
-        if not account or account.user_id != user_id:
+        if not account or account.workspace_id != workspace_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Social account not found",
             )
 
-    def _ensure_mock_data_if_needed(self, db: Session, user_id: int) -> None:
+    def _ensure_mock_data_if_needed(self, db: Session, workspace_id: int, user_id: int = 1) -> None:
         settings = get_settings()
         if not settings.social_mock_mode:
             return
 
-        accounts = self.repository.get_user_social_accounts(db, user_id=user_id)
+        accounts = self.repository.get_workspace_social_accounts(db, workspace_id=workspace_id)
         if not accounts:
             from app.core.encryption import encrypt_token
 
-            # Create mock social account for development
             acc = SocialAccount(
+                workspace_id=workspace_id,
                 user_id=user_id,
                 platform="facebook",
                 provider="meta",
-                external_account_id=f"fb_mock_acc_{user_id}",
+                external_account_id=f"fb_mock_acc_{workspace_id}",
                 account_name="CommunityAI Page",
                 account_username="communityai_page",
                 profile_image_url="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe",
@@ -80,38 +80,40 @@ class AnalyticsService:
             db.refresh(acc)
             accounts = [acc]
 
-        # Check if snapshots exist
-        existing = self.repository.get_snapshots(db, user_id=user_id)
+        existing = self.repository.get_snapshots(db, workspace_id=workspace_id)
         if not existing:
             for acc in accounts:
-                self.repository.seed_mock_analytics(db, user_id=user_id, social_account=acc, days=30)
+                self.repository.seed_mock_analytics(
+                    db, user_id=user_id, social_account=acc, days=30, workspace_id=workspace_id
+                )
 
     def get_summary(
         self,
         db: Session,
-        user_id: int,
+        workspace_id: int,
+        user_id: int | None = None,
         social_account_id: int | None = None,
         platform: str | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
         days: int | None = None,
     ) -> AnalyticsSummaryResponse:
-        self._verify_social_account_ownership(db, user_id, social_account_id)
-        self._ensure_mock_data_if_needed(db, user_id)
+        self._verify_social_account_ownership(db, workspace_id, social_account_id)
+        self._ensure_mock_data_if_needed(db, workspace_id, user_id or 1)
 
         start, end = self._normalize_dates(start_date, end_date, days)
         snapshots = self.repository.get_snapshots(
             db=db,
-            user_id=user_id,
+            workspace_id=workspace_id,
             social_account_id=social_account_id,
             platform=platform,
             start_date=start,
             end_date=end,
         )
 
-        accounts = self.repository.get_user_social_accounts(
+        accounts = self.repository.get_workspace_social_accounts(
             db=db,
-            user_id=user_id,
+            workspace_id=workspace_id,
             social_account_id=social_account_id,
             platform=platform,
         )
@@ -128,7 +130,6 @@ class AnalyticsService:
             )
 
         # Compute followers & follower growth strictly according to specification:
-        # Group snapshots by social_account_id
         by_account: dict[int, list[AnalyticsSnapshot]] = defaultdict(list)
         for s in snapshots:
             by_account[s.social_account_id].append(s)
@@ -143,24 +144,34 @@ class AnalyticsService:
             latest_total_followers += latest_snap.followers
 
         total_followers = latest_total_followers
-        follower_growth = latest_total_followers - earliest_total_followers
+        follower_growth = total_followers - earliest_total_followers
 
-        # Sum cumulative metrics across period
+        # Follower growth rate (%)
+        if earliest_total_followers > 0:
+            growth_rate = round((follower_growth / earliest_total_followers) * 100, 2)
+        else:
+            growth_rate = 0.0
+
+        # Sum aggregates across snapshots
         total_impressions = sum(s.impressions for s in snapshots)
         total_reach = sum(s.reach for s in snapshots)
-        total_engagement = sum(s.engagement for s in snapshots)
-        engagement_rate = (
-            round((total_engagement / total_reach * 100), 2) if total_reach > 0 else 0.0
-        )
         total_likes = sum(s.likes for s in snapshots)
         total_comments = sum(s.comments for s in snapshots)
         total_shares = sum(s.shares for s in snapshots)
         total_clicks = sum(s.clicks for s in snapshots)
+        total_engagement = sum(s.engagement for s in snapshots)
         posts_published = sum(s.posts_published for s in snapshots)
+
+        # Engagement rate (%) = (total_engagement / total_reach) * 100
+        if total_reach > 0:
+            engagement_rate = round((total_engagement / total_reach) * 100, 2)
+        else:
+            engagement_rate = 0.0
 
         kpis = AnalyticsKpiSummary(
             total_followers=total_followers,
             follower_growth=follower_growth,
+            follower_growth_rate=growth_rate,
             total_impressions=total_impressions,
             total_reach=total_reach,
             total_engagement=total_engagement,
@@ -184,27 +195,27 @@ class AnalyticsService:
     def get_time_series(
         self,
         db: Session,
-        user_id: int,
+        workspace_id: int,
+        user_id: int | None = None,
         social_account_id: int | None = None,
         platform: str | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
         days: int | None = None,
     ) -> AnalyticsTimeSeriesResponse:
-        self._verify_social_account_ownership(db, user_id, social_account_id)
-        self._ensure_mock_data_if_needed(db, user_id)
+        self._verify_social_account_ownership(db, workspace_id, social_account_id)
+        self._ensure_mock_data_if_needed(db, workspace_id, user_id or 1)
 
         start, end = self._normalize_dates(start_date, end_date, days)
         snapshots = self.repository.get_snapshots(
             db=db,
-            user_id=user_id,
+            workspace_id=workspace_id,
             social_account_id=social_account_id,
             platform=platform,
             start_date=start,
             end_date=end,
         )
 
-        # Group by date for metric-appropriate aggregation
         by_date: dict[date, list[AnalyticsSnapshot]] = defaultdict(list)
         for s in snapshots:
             by_date[s.date].append(s)
@@ -250,19 +261,20 @@ class AnalyticsService:
     def get_top_posts(
         self,
         db: Session,
-        user_id: int,
+        workspace_id: int,
+        user_id: int | None = None,
         social_account_id: int | None = None,
         platform: str | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
         limit: int = 10,
     ) -> TopPostsResponse:
-        self._verify_social_account_ownership(db, user_id, social_account_id)
-        self._ensure_mock_data_if_needed(db, user_id)
+        self._verify_social_account_ownership(db, workspace_id, social_account_id)
+        self._ensure_mock_data_if_needed(db, workspace_id, user_id or 1)
 
         items = self.repository.get_top_posts(
             db=db,
-            user_id=user_id,
+            workspace_id=workspace_id,
             social_account_id=social_account_id,
             platform=platform,
             start_date=start_date,
@@ -278,7 +290,8 @@ class AnalyticsService:
     def seed_mock(
         self,
         db: Session,
-        user_id: int,
+        workspace_id: int,
+        user_id: int = 1,
         days: int = 30,
     ) -> AnalyticsSeedResponse:
         settings = get_settings()
@@ -288,15 +301,16 @@ class AnalyticsService:
                 detail="Mock mode is disabled",
             )
 
-        accounts = self.repository.get_user_social_accounts(db, user_id=user_id)
+        accounts = self.repository.get_workspace_social_accounts(db, workspace_id=workspace_id)
         if not accounts:
             from app.core.encryption import encrypt_token
 
             acc = SocialAccount(
+                workspace_id=workspace_id,
                 user_id=user_id,
                 platform="facebook",
                 provider="meta",
-                external_account_id=f"fb_seed_{user_id}",
+                external_account_id=f"fb_seed_{workspace_id}",
                 account_name="CommunityAI Page",
                 account_username="communityai_page",
                 profile_image_url="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe",
@@ -315,6 +329,7 @@ class AnalyticsService:
                 user_id=user_id,
                 social_account=acc,
                 days=days,
+                workspace_id=workspace_id,
             )
             total_created += len(created)
 

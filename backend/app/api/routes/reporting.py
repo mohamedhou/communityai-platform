@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_user, get_db
-from app.models.user import User
+from app.api.dependencies import get_db
+from app.api.workspace_context import WorkspaceContext, get_workspace_context
 from app.schemas.reporting import ReportPreviewResponse, ReportRequest
 from app.services.reporting_service import ReportingService
 
@@ -38,10 +38,15 @@ def preview(
     platform: str | None = Query(default=None),
     start_date: date = Query(...),
     end_date: date = Query(...),
-    current_user: User = Depends(get_current_user),
+    context: WorkspaceContext = Depends(get_workspace_context),
     db: Session = Depends(get_db),
 ) -> ReportPreviewResponse:
-    return ReportingService().build_preview(db, current_user, _request(social_account_id, platform, start_date, end_date))
+    return ReportingService().build_preview(
+        db,
+        context.user,
+        _request(social_account_id, platform, start_date, end_date),
+        workspace_id=context.workspace_id,
+    )
 
 
 def _export_request(
@@ -49,12 +54,17 @@ def _export_request(
     platform: str | None,
     start_date: date,
     end_date: date,
-    current_user: User,
+    context: WorkspaceContext,
     db: Session,
     kind: str,
 ) -> Response:
     service = ReportingService()
-    preview_response = service.build_preview(db, current_user, _request(social_account_id, platform, start_date, end_date))
+    preview_response = service.build_preview(
+        db,
+        context.user,
+        _request(social_account_id, platform, start_date, end_date),
+        workspace_id=context.workspace_id,
+    )
     today = date.today().isoformat()
     if kind == "csv":
         return Response(
@@ -73,15 +83,15 @@ def _export_request(
 def export_csv(
     social_account_id: int | None = Query(default=None, ge=1), platform: str | None = Query(default=None),
     start_date: date = Query(...), end_date: date = Query(...),
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db),
+    context: WorkspaceContext = Depends(get_workspace_context), db: Session = Depends(get_db),
 ) -> Response:
-    return _export_request(social_account_id, platform, start_date, end_date, current_user, db, "csv")
+    return _export_request(social_account_id, platform, start_date, end_date, context, db, "csv")
 
 
 @router.get("/export/pdf")
 def export_pdf(
     social_account_id: int | None = Query(default=None, ge=1), platform: str | None = Query(default=None),
     start_date: date = Query(...), end_date: date = Query(...),
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db),
+    context: WorkspaceContext = Depends(get_workspace_context), db: Session = Depends(get_db),
 ) -> Response:
-    return _export_request(social_account_id, platform, start_date, end_date, current_user, db, "pdf")
+    return _export_request(social_account_id, platform, start_date, end_date, context, db, "pdf")

@@ -10,20 +10,28 @@ from app.social.models import SocialAccount
 
 
 class InboxRepository:
-    def get_by_id(self, db: Session, message_id: int, user_id: int | None = None) -> InboxMessage | None:
+    def get_by_id(
+        self,
+        db: Session,
+        message_id: int,
+        workspace_id: int | None = None,
+        user_id: int | None = None,
+    ) -> InboxMessage | None:
         query = (
             select(InboxMessage)
             .options(joinedload(InboxMessage.social_account))
             .where(InboxMessage.id == message_id)
         )
-        if user_id is not None:
+        if workspace_id is not None:
+            query = query.where(InboxMessage.workspace_id == workspace_id)
+        elif user_id is not None:
             query = query.where(InboxMessage.user_id == user_id)
         return db.scalars(query).first()
 
     def list_messages(
         self,
         db: Session,
-        user_id: int,
+        workspace_id: int,
         type: InboxMessageType | None = None,
         platform: str | None = None,
         sentiment: InboxSentiment | None = None,
@@ -36,7 +44,7 @@ class InboxRepository:
         base_query = (
             select(InboxMessage)
             .options(joinedload(InboxMessage.social_account))
-            .where(InboxMessage.user_id == user_id)
+            .where(InboxMessage.workspace_id == workspace_id)
         )
 
         if platform:
@@ -79,15 +87,35 @@ class InboxRepository:
 
         return items, total
 
-    def count_unread(self, db: Session, user_id: int) -> int:
+    def count_unread(self, db: Session, workspace_id: int) -> int:
         stmt = select(func.count()).select_from(InboxMessage).where(
-            InboxMessage.user_id == user_id,
+            InboxMessage.workspace_id == workspace_id,
             InboxMessage.is_read.is_(False),
         )
         return db.scalar(stmt) or 0
 
-    def create(self, db: Session, message_in: InboxMessageCreate) -> InboxMessage:
+    def create(
+        self,
+        db: Session,
+        message_in: InboxMessageCreate,
+        workspace_id: int | None = None,
+    ) -> InboxMessage:
+        if workspace_id is None:
+            account = db.get(SocialAccount, message_in.social_account_id)
+            if account:
+                workspace_id = account.workspace_id
+            else:
+                from app.services.workspace_service import WorkspaceService
+                from app.models.user import User
+
+                user = db.get(User, message_in.user_id)
+                if user:
+                    workspace_id = WorkspaceService(db).get_or_create_default_workspace(user).workspace_id
+                else:
+                    workspace_id = 1
+
         db_obj = InboxMessage(
+            workspace_id=workspace_id,
             user_id=message_in.user_id,
             social_account_id=message_in.social_account_id,
             external_id=message_in.external_id,
@@ -113,8 +141,12 @@ class InboxRepository:
         return db_obj
 
     def seed_mock_interactions(
-        self, db: Session, user_id: int, social_account_id: int
+        self, db: Session, user_id: int, social_account_id: int, workspace_id: int | None = None
     ) -> list[InboxMessage]:
+        if workspace_id is None:
+            account = db.get(SocialAccount, social_account_id)
+            workspace_id = account.workspace_id if account else None
+
         mock_data = [
             InboxMessageCreate(
                 user_id=user_id,
@@ -185,5 +217,5 @@ class InboxRepository:
 
         created = []
         for item in mock_data:
-            created.append(self.create(db, item))
+            created.append(self.create(db, item, workspace_id=workspace_id))
         return created

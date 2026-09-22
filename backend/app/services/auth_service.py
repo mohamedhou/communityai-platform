@@ -13,6 +13,7 @@ from app.core.security import (
     verify_password,
 )
 from app.models.user import User, UserRole
+from app.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
 from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.user import UserCreate
@@ -30,13 +31,29 @@ class AuthService:
         if existing_user is not None:
             raise ValueError("email_already_used")
 
-        return self.users.create_user(
+        user = self.users.create_user(
             email=normalized_email,
             password_hash=hash_password(payload.password),
             first_name=payload.first_name.strip(),
             last_name=payload.last_name.strip(),
             role=UserRole.COMMUNITY_MANAGER,
         )
+        slug = f"{normalized_email.split('@', 1)[0]}-{user.id}"
+        workspace = Workspace(name=f"{user.first_name}'s Workspace", slug=slug, owner_id=user.id)
+        self.db.add(workspace)
+        self.db.flush()
+        self.db.add(
+            WorkspaceMember(
+                workspace_id=workspace.id,
+                user_id=user.id,
+                role=WorkspaceRole.OWNER,
+                status="ACTIVE",
+                joined_at=datetime.now(UTC),
+            )
+        )
+        self.db.commit()
+        self.db.refresh(user)
+        return user
 
     def authenticate_user(self, *, email: str, password: str) -> User | None:
         normalized_email = email.strip().lower()

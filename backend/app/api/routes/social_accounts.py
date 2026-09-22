@@ -7,6 +7,11 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user, get_db
+from app.api.workspace_context import (
+    WorkspaceContext,
+    get_workspace_context,
+    require_workspace_editor,
+)
 from app.core.encryption import is_encryption_key_valid
 from app.models.user import User
 from app.schemas.social_account import SocialAccountResponse
@@ -46,23 +51,23 @@ def get_social_config_status(
 
 @router.get("", response_model=list[SocialAccountResponse])
 def list_social_accounts(
-    current_user: User = Depends(get_current_user),
+    context: WorkspaceContext = Depends(get_workspace_context),
     db: Session = Depends(get_db),
 ) -> list[SocialAccountResponse]:
     service = SocialAccountService(db)
-    accounts = service.list_accounts(current_user.id)
+    accounts = service.list_accounts(context.workspace_id)
     return [SocialAccountResponse.model_validate(acc) for acc in accounts]
 
 
 @router.get("/{platform}/connect")
 def get_connect_url(
     platform: str,
-    current_user: User = Depends(get_current_user),
+    context: WorkspaceContext = Depends(require_workspace_editor),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
     service = SocialAccountService(db)
     try:
-        url = service.create_authorization_url(current_user.id, platform)
+        url = service.create_authorization_url(context.user.id, platform, workspace_id=context.workspace_id)
         return {"url": url}
     except ValueError as exc:
         raise HTTPException(
@@ -111,12 +116,12 @@ def oauth_callback(
 @router.delete("/{account_id}", status_code=status.HTTP_200_OK)
 def disconnect_social_account(
     account_id: int,
-    current_user: User = Depends(get_current_user),
+    context: WorkspaceContext = Depends(require_workspace_editor),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
     service = SocialAccountService(db)
     try:
-        service.disconnect_account(current_user.id, account_id)
+        service.disconnect_account(context.workspace_id, account_id)
         return {"message": "Account disconnected successfully"}
     except ValueError as exc:
         if str(exc) == "account_not_found":
@@ -128,19 +133,19 @@ def disconnect_social_account(
     except PermissionError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not own this social account",
+            detail="You do not have permission to manage this social account",
         ) from exc
 
 
 @router.post("/{account_id}/refresh", response_model=SocialAccountResponse)
 def refresh_social_account_token(
     account_id: int,
-    current_user: User = Depends(get_current_user),
+    context: WorkspaceContext = Depends(require_workspace_editor),
     db: Session = Depends(get_db),
 ) -> SocialAccountResponse:
     service = SocialAccountService(db)
     try:
-        updated_account = service.refresh_account_token(current_user.id, account_id)
+        updated_account = service.refresh_account_token(context.workspace_id, account_id)
         return SocialAccountResponse.model_validate(updated_account)
     except ValueError as exc:
         if str(exc) == "account_not_found":
@@ -152,7 +157,7 @@ def refresh_social_account_token(
     except PermissionError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not own this social account",
+            detail="You do not have permission to manage this social account",
         ) from exc
     except SocialProviderError as exc:
         raise HTTPException(

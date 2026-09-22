@@ -22,6 +22,7 @@ import { InboxPage } from './features/inbox/pages/InboxPage'
 import { AnalyticsPage } from './features/analytics/pages/AnalyticsPage'
 import { NotificationsPage } from './features/notifications/pages/NotificationsPage'
 import { SettingsPage } from './features/settings/pages/SettingsPage'
+import { AcceptInvitationPage } from './features/settings/pages/AcceptInvitationPage'
 import { ReportingPage } from './features/reporting/pages/ReportingPage'
 
 
@@ -85,6 +86,12 @@ function App() {
         path="/register"
         element={<RegisterPage />}
       />
+
+      <Route
+        path="/invitations/:token"
+        element={<AcceptInvitationPage />}
+      />
+
 
       {/* Protected routes */}
       <Route element={<ProtectedLayout />}>
