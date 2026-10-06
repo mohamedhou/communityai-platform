@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.post import PostStatus
+from app.models.post import PostApprovalStatus, PostStatus
 
 
 class PostBase(BaseModel):
@@ -33,6 +33,11 @@ class PostResponse(BaseModel):
     scheduled_at: datetime | None = None
     published_at: datetime | None = None
     status: PostStatus
+    approval_status: PostApprovalStatus = PostApprovalStatus.NOT_REQUIRED
+    reviewed_by: int | None = None
+    reviewed_at: datetime | None = None
+    rejection_reason: str | None = None
+    submitted_for_review_at: datetime | None = None
     external_post_id: str | None = None
     error_message: str | None = None
     created_at: datetime
@@ -41,3 +46,7 @@ class PostResponse(BaseModel):
 
 class PostScheduleRequest(BaseModel):
     scheduled_at: datetime
+
+
+class PostRejectRequest(BaseModel):
+    reason: str = Field(..., min_length=1, max_length=1000)

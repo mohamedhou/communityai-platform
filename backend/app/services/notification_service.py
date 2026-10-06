@@ -290,3 +290,112 @@ class NotificationService:
                 entity_id=None,
             ),
         )
+
+    def notify_post_submitted_for_review(
+        self,
+        db: Session,
+        user_ids: list[int],
+        post_id: int,
+        author_name: str,
+        action_url: str = "/posts/review",
+    ) -> list[Notification]:
+        notifications = []
+        for uid in user_ids:
+            try:
+                n = self.create_notification(
+                    db=db,
+                    notification_in=NotificationCreate(
+                        user_id=uid,
+                        type=NotificationType.WORKSPACE,
+                        title="Publication soumise pour validation",
+                        message=f"{author_name} a soumis la publication #{post_id} pour validation.",
+                        severity=NotificationSeverity.INFO,
+                        action_url=action_url,
+                        entity_type="post",
+                        entity_id=str(post_id),
+                    ),
+                )
+                notifications.append(n)
+            except Exception:
+                pass
+        return notifications
+
+    def notify_post_resubmitted(
+        self,
+        db: Session,
+        user_ids: list[int],
+        post_id: int,
+        author_name: str,
+        action_url: str = "/posts/review",
+    ) -> list[Notification]:
+        notifications = []
+        for uid in user_ids:
+            try:
+                n = self.create_notification(
+                    db=db,
+                    notification_in=NotificationCreate(
+                        user_id=uid,
+                        type=NotificationType.WORKSPACE,
+                        title="Publication resoumise pour validation",
+                        message=f"{author_name} a resoumis la publication #{post_id} après modification.",
+                        severity=NotificationSeverity.INFO,
+                        action_url=action_url,
+                        entity_type="post",
+                        entity_id=str(post_id),
+                    ),
+                )
+                notifications.append(n)
+            except Exception:
+                pass
+        return notifications
+
+    def notify_post_approved(
+        self,
+        db: Session,
+        author_id: int,
+        post_id: int,
+        reviewer_name: str,
+        action_url: str = "/posts",
+    ) -> Notification | None:
+        try:
+            return self.create_notification(
+                db=db,
+                notification_in=NotificationCreate(
+                    user_id=author_id,
+                    type=NotificationType.WORKSPACE,
+                    title="Publication approuvée",
+                    message=f"Votre publication #{post_id} a été approuvée par {reviewer_name}.",
+                    severity=NotificationSeverity.SUCCESS,
+                    action_url=action_url,
+                    entity_type="post",
+                    entity_id=str(post_id),
+                ),
+            )
+        except Exception:
+            return None
+
+    def notify_post_rejected(
+        self,
+        db: Session,
+        author_id: int,
+        post_id: int,
+        reviewer_name: str,
+        reason: str,
+        action_url: str = "/posts",
+    ) -> Notification | None:
+        try:
+            return self.create_notification(
+                db=db,
+                notification_in=NotificationCreate(
+                    user_id=author_id,
+                    type=NotificationType.WORKSPACE,
+                    title="Publication rejetée",
+                    message=f"Votre publication #{post_id} a été rejetée par {reviewer_name} : {reason}",
+                    severity=NotificationSeverity.WARNING,
+                    action_url=action_url,
+                    entity_type="post",
+                    entity_id=str(post_id),
+                ),
+            )
+        except Exception:
+            return None

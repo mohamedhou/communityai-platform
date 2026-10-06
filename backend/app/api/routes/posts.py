@@ -9,8 +9,15 @@ from app.api.workspace_context import (
     get_workspace_context,
     require_workspace_editor,
 )
-from app.models.post import PostStatus
-from app.schemas.post import PostCreate, PostUpdate, PostResponse, PostScheduleRequest
+from app.models.post import PostApprovalStatus, PostStatus
+from app.models.workspace import WorkspaceRole
+from app.schemas.post import (
+    PostCreate,
+    PostRejectRequest,
+    PostResponse,
+    PostScheduleRequest,
+    PostUpdate,
+)
 from app.services.post_service import PostService
 
 router = APIRouter(prefix="/api/v1/posts", tags=["posts"])
@@ -52,11 +59,36 @@ def create_post(
 @router.get("", response_model=list[PostResponse])
 def list_posts(
     status_filter: PostStatus | None = None,
+    approval_status: PostApprovalStatus | None = None,
     context: WorkspaceContext = Depends(get_workspace_context),
     db: Session = Depends(get_db),
 ) -> list[PostResponse]:
     service = PostService(db)
-    posts = service.list_posts(context.workspace_id, status=status_filter)
+    posts = service.list_posts(
+        context.workspace_id,
+        status=status_filter,
+        approval_status=approval_status,
+    )
+    return [PostResponse.model_validate(p) for p in posts]
+
+
+@router.get("/review/queue", response_model=list[PostResponse])
+def get_review_queue(
+    context: WorkspaceContext = Depends(get_workspace_context),
+    db: Session = Depends(get_db),
+) -> list[PostResponse]:
+    service = PostService(db)
+    posts = service.list_review_queue(context.workspace_id)
+    return [PostResponse.model_validate(p) for p in posts]
+
+
+@router.get("/review/history", response_model=list[PostResponse])
+def get_review_history(
+    context: WorkspaceContext = Depends(get_workspace_context),
+    db: Session = Depends(get_db),
+) -> list[PostResponse]:
+    service = PostService(db)
+    posts = service.list_review_history(context.workspace_id)
     return [PostResponse.model_validate(p) for p in posts]
 
 
@@ -151,7 +183,7 @@ def publish_post(
 ) -> PostResponse:
     service = PostService(db)
     try:
-        post = service.publish_post(context.workspace_id, post_id)
+        post = service.publish_post(context.workspace_id, post_id, context.role)
         if post.status == PostStatus.FAILED:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
@@ -189,6 +221,7 @@ def schedule_post(
             post_id,
             payload.scheduled_at,
             actor_user_id=context.user.id,
+            actor_role=context.role,
         )
         return PostResponse.model_validate(post)
     except ValueError as exc:
@@ -232,4 +265,102 @@ def cancel_post(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have access to this post",
+        ) from exc
+
+
+@router.post("/{post_id}/submit-review", response_model=PostResponse)
+def submit_for_review(
+    post_id: int,
+    context: WorkspaceContext = Depends(require_workspace_editor),
+    db: Session = Depends(get_db),
+) -> PostResponse:
+    service = PostService(db)
+    try:
+        post = service.submit_for_review(context.workspace_id, post_id, context.user.id)
+        return PostResponse.model_validate(post)
+    except ValueError as exc:
+        if str(exc) == "post_not_found":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Post not found",
+            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this post",
+        ) from exc
+
+
+@router.post("/{post_id}/approve", response_model=PostResponse)
+def approve_post(
+    post_id: int,
+    context: WorkspaceContext = Depends(get_workspace_context),
+    db: Session = Depends(get_db),
+) -> PostResponse:
+    if context.role not in (WorkspaceRole.OWNER, WorkspaceRole.ADMIN):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only workspace owners and admins can approve posts",
+        )
+    service = PostService(db)
+    try:
+        post = service.approve_post(context.workspace_id, post_id, context.user.id, context.role)
+        return PostResponse.model_validate(post)
+    except ValueError as exc:
+        if str(exc) == "post_not_found":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Post not found",
+            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post("/{post_id}/reject", response_model=PostResponse)
+def reject_post(
+    post_id: int,
+    payload: PostRejectRequest,
+    context: WorkspaceContext = Depends(get_workspace_context),
+    db: Session = Depends(get_db),
+) -> PostResponse:
+    if context.role not in (WorkspaceRole.OWNER, WorkspaceRole.ADMIN):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only workspace owners and admins can reject posts",
+        )
+    service = PostService(db)
+    try:
+        post = service.reject_post(
+            context.workspace_id,
+            post_id,
+            context.user.id,
+            context.role,
+            payload.reason,
+        )
+        return PostResponse.model_validate(post)
+    except ValueError as exc:
+        if str(exc) == "post_not_found":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Post not found",
+            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
         ) from exc

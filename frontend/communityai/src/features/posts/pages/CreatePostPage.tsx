@@ -7,11 +7,12 @@ import * as postApi from '../services/postApi'
 import { getSocialAccounts } from '../../social-accounts/services/socialApi'
 
 export function CreatePostPage() {
-  const { accessToken } = useAuth()
+  const { accessToken, user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const { postId } = useParams<{ postId?: string }>()
   const isEditMode = !!postId
+  const isCommunityManager = user?.role === 'COMMUNITY_MANAGER'
 
   const locationContent = (location.state as { content?: string } | null)?.content || ''
   const [content, setContent] = useState(locationContent)
@@ -39,6 +40,7 @@ export function CreatePostPage() {
     },
     enabled: !!accessToken && isEditMode,
   })
+  const canSchedule = !isCommunityManager || existingPost?.approval_status === 'APPROVED'
 
   useEffect(() => {
     if (existingPost) {
@@ -56,17 +58,38 @@ export function CreatePostPage() {
     }
   }, [existingPost])
 
+  // Submit for Review mutation
+  const submitReviewMutation = useMutation({
+    mutationFn: (id: number) => {
+      if (!accessToken) throw new Error('Not authenticated')
+      return postApi.submitForReview(accessToken, id)
+    },
+    onSuccess: () => {
+      alert('Post submitted for review!')
+      navigate('/posts')
+    },
+    onError: (err: any) => {
+      alert(`Submit for review failed: ${err.message}`)
+      navigate('/posts')
+    },
+  })
+
   // Save as Draft mutation
   const saveMutation = useMutation({
-    mutationFn: (payload: { content: string; social_account_id: number; media_url?: string }) => {
+    mutationFn: (params: {
+      payload: { content: string; social_account_id: number; media_url?: string }
+      andSubmit?: boolean
+    }) => {
       if (!accessToken) throw new Error('Not authenticated')
       if (isEditMode && postId) {
-        return postApi.updatePost(accessToken, parseInt(postId, 10), payload)
+        return postApi.updatePost(accessToken, parseInt(postId, 10), params.payload)
       }
-      return postApi.createPost(accessToken, payload)
+      return postApi.createPost(accessToken, params.payload)
     },
-    onSuccess: (post) => {
-      if (isScheduling && scheduledAt) {
+    onSuccess: (post, variables) => {
+      if (variables.andSubmit) {
+        submitReviewMutation.mutate(post.id)
+      } else if (isScheduling && scheduledAt) {
         // Schedule after saving
         scheduleMutation.mutate({ postId: post.id, scheduledAt })
       } else {
@@ -123,7 +146,7 @@ export function CreatePostPage() {
     },
   })
 
-  const handleSubmit = (e: React.FormEvent, action: 'save' | 'publish') => {
+  const handleSubmit = (e: React.FormEvent, action: 'save' | 'save_and_submit' | 'publish') => {
     e.preventDefault()
     if (!socialAccountId) {
       alert('Please select a social account')
@@ -142,8 +165,10 @@ export function CreatePostPage() {
 
     if (action === 'publish') {
       publishMutation.mutate(payload)
+    } else if (action === 'save_and_submit') {
+      saveMutation.mutate({ payload, andSubmit: true })
     } else {
-      saveMutation.mutate(payload)
+      saveMutation.mutate({ payload, andSubmit: false })
     }
   }
 
@@ -158,6 +183,60 @@ export function CreatePostPage() {
       <div className="social-container" style={{ maxWidth: '900px' }}>
         <h1>{isEditMode ? 'Edit Publication' : 'New Publication'}</h1>
         <p className="page-subtitle">Compose your message and preview how it will look.</p>
+
+        {/* Approval Status Alerts */}
+        {isEditMode && existingPost?.approval_status === 'REJECTED' && existingPost.rejection_reason && (
+          <div
+            style={{
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              color: '#b91c1c',
+              padding: '16px',
+              borderRadius: '8px',
+              marginTop: '16px',
+            }}
+          >
+            <h4 style={{ margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              ✕ Changes Requested by Reviewer
+            </h4>
+            <p style={{ margin: 0, fontSize: '0.95rem' }}>{existingPost.rejection_reason}</p>
+            <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#7f1d1d' }}>
+              Please update your post content accordingly, then click <strong>Save & Submit for Review</strong>.
+            </p>
+          </div>
+        )}
+
+        {isEditMode && existingPost?.approval_status === 'PENDING' && (
+          <div
+            style={{
+              background: '#fffbeb',
+              border: '1px solid #fef3c7',
+              color: '#92400e',
+              padding: '14px',
+              borderRadius: '8px',
+              marginTop: '16px',
+              fontSize: '0.9rem',
+            }}
+          >
+            ⏳ <strong>Pending Review:</strong> This publication is currently awaiting reviewer approval. Modifying it will update the pending draft.
+          </div>
+        )}
+
+        {isEditMode && existingPost?.approval_status === 'APPROVED' && (
+          <div
+            style={{
+              background: '#fefce8',
+              border: '1px solid #fef08a',
+              color: '#854d0e',
+              padding: '14px',
+              borderRadius: '8px',
+              marginTop: '16px',
+              fontSize: '0.9rem',
+            }}
+          >
+            ⚠️ <strong>Notice:</strong> This post has already been approved. Making changes will reset approval and require resubmission.
+          </div>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginTop: '24px' }}>
           {/* Form */}
@@ -216,9 +295,15 @@ export function CreatePostPage() {
                   type="checkbox"
                   checked={isScheduling}
                   onChange={(e) => setIsScheduling(e.target.checked)}
+                  disabled={!canSchedule}
                 />
                 Schedule for Later
               </label>
+              {isCommunityManager && !canSchedule && (
+                <p style={{ margin: '8px 0 0', color: '#92400e', fontSize: '0.85rem' }}>
+                  Approval required before scheduling or publishing.
+                </p>
+              )}
 
               {isScheduling && (
                 <div style={{ marginTop: '10px' }}>
@@ -236,24 +321,42 @@ export function CreatePostPage() {
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '12px', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 onClick={(e) => handleSubmit(e, 'save')}
-                disabled={saveMutation.isPending}
+                disabled={saveMutation.isPending || submitReviewMutation.isPending}
                 className="action-btn btn-refresh"
-                style={{ flex: 1, padding: '12px' }}
+                style={{ flex: 1, minWidth: '120px', padding: '12px' }}
               >
-                {saveMutation.isPending ? 'Saving...' : isEditMode ? 'Update Draft' : 'Save as Draft'}
+                {saveMutation.isPending ? 'Saving...' : isEditMode ? 'Save Draft' : 'Save as Draft'}
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => handleSubmit(e, 'save_and_submit')}
+                disabled={saveMutation.isPending || submitReviewMutation.isPending}
+                className="action-btn"
+                style={{
+                  flex: 1,
+                  minWidth: '160px',
+                  padding: '12px',
+                  background: '#fef3c7',
+                  color: '#92400e',
+                  border: '1px solid #fde68a',
+                  fontWeight: 600,
+                }}
+              >
+                {submitReviewMutation.isPending ? 'Submitting...' : 'Save & Submit for Review'}
               </button>
               
               {!isEditMode && (
                 <button
                   type="button"
                   onClick={(e) => handleSubmit(e, 'publish')}
-                  disabled={publishMutation.isPending || triggerPublishMutation.isPending}
+                  disabled={publishMutation.isPending || triggerPublishMutation.isPending || !canSchedule}
                   className="connect-btn btn-linkedin"
-                  style={{ flex: 1, padding: '12px', margin: 0 }}
+                  style={{ flex: 1, minWidth: '140px', padding: '12px', margin: 0 }}
                 >
                   {publishMutation.isPending || triggerPublishMutation.isPending ? 'Publishing...' : 'Publish Immediately'}
                 </button>

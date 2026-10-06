@@ -8,7 +8,7 @@ import { getSocialAccounts } from '../../social-accounts/services/socialApi'
 import type { PostStatus } from '../types/post'
 
 export function PostsPage() {
-  const { accessToken } = useAuth()
+  const { accessToken, user } = useAuth()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState<PostStatus | 'ALL'>('ALL')
@@ -23,6 +23,17 @@ export function PostsPage() {
     enabled: !!accessToken,
   })
 
+  // Fetch review queue for pending badge count
+  const { data: queuePosts } = useQuery({
+    queryKey: ['posts-review-queue'],
+    queryFn: () => {
+      if (!accessToken) throw new Error('Not authenticated')
+      return postApi.getReviewQueue(accessToken)
+    },
+    enabled: !!accessToken,
+  })
+  const pendingCount = queuePosts?.length ?? 0
+
   // Fetch social accounts (to map name/platform details)
   const { data: accounts } = useQuery({
     queryKey: ['social-accounts'],
@@ -31,6 +42,22 @@ export function PostsPage() {
       return getSocialAccounts(accessToken)
     },
     enabled: !!accessToken,
+  })
+
+  // Submit for Review mutation
+  const submitReviewMutation = useMutation({
+    mutationFn: (postId: number) => {
+      if (!accessToken) throw new Error('Not authenticated')
+      return postApi.submitForReview(accessToken, postId)
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['posts'] })
+      void queryClient.invalidateQueries({ queryKey: ['posts-review-queue'] })
+      alert('Post submitted for review successfully!')
+    },
+    onError: (err: any) => {
+      alert(`Submission failed: ${err.message}`)
+    },
   })
 
   // Mutations
@@ -98,9 +125,43 @@ export function PostsPage() {
             <h1>Publications</h1>
             <p className="page-subtitle">Draft, schedule, and publish posts to Meta & LinkedIn.</p>
           </div>
-          <Link to="/posts/new" className="connect-btn btn-linkedin" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-            New Publication
-          </Link>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <Link
+              to="/posts/review"
+              className="action-btn"
+              style={{
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: '#fef3c7',
+                color: '#92400e',
+                border: '1px solid #fde68a',
+                padding: '8px 14px',
+                borderRadius: '6px',
+                fontWeight: 600,
+              }}
+            >
+              Review Queue
+              {pendingCount > 0 && (
+                <span
+                  style={{
+                    background: '#f59e0b',
+                    color: 'white',
+                    borderRadius: '10px',
+                    padding: '1px 6px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  {pendingCount}
+                </span>
+              )}
+            </Link>
+            <Link to="/posts/new" className="connect-btn btn-linkedin" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              New Publication
+            </Link>
+          </div>
         </div>
 
         {/* Filters */}
@@ -130,10 +191,18 @@ export function PostsPage() {
           <div className="channels-list">
             {posts.map((post) => {
               const acc = getAccountInfo(post.social_account_id)
+              const isCommunityManager = user?.role === 'COMMUNITY_MANAGER'
+              const isApprovalBlocked =
+                post.approval_status === 'PENDING' ||
+                post.approval_status === 'REJECTED' ||
+                (isCommunityManager && post.approval_status === 'NOT_REQUIRED')
               const showPublish = post.status === 'DRAFT' || post.status === 'FAILED'
               const showCancel = post.status === 'SCHEDULED'
               const showDelete = post.status === 'DRAFT' || post.status === 'SCHEDULED' || post.status === 'FAILED' || post.status === 'CANCELLED'
               const showEdit = post.status === 'DRAFT' || post.status === 'SCHEDULED' || post.status === 'FAILED'
+              const canSubmitForReview =
+                (post.status === 'DRAFT' || post.status === 'FAILED') &&
+                (post.approval_status === 'NOT_REQUIRED' || post.approval_status === 'REJECTED')
 
               return (
                 <div key={post.id} className="channel-card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '16px', padding: '20px', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
@@ -154,9 +223,26 @@ export function PostsPage() {
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <span className={`status-label status-dot ${post.status.toLowerCase()}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold' }}>
-                        {post.status}
-                      </span>
+                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <span className={`status-label status-dot ${post.status.toLowerCase()}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold' }}>
+                          {post.status}
+                        </span>
+                        {post.approval_status === 'PENDING' && (
+                          <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '9999px', background: '#fef3c7', color: '#92400e', fontWeight: 600 }}>
+                            ⏳ In Review
+                          </span>
+                        )}
+                        {post.approval_status === 'APPROVED' && (
+                          <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '9999px', background: '#dcfce7', color: '#166534', fontWeight: 600 }}>
+                            ✓ Approved
+                          </span>
+                        )}
+                        {post.approval_status === 'REJECTED' && (
+                          <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '9999px', background: '#fee2e2', color: '#991b1b', fontWeight: 600 }}>
+                            ✕ Rejected
+                          </span>
+                        )}
+                      </div>
                       {post.scheduled_at && (
                         <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '4px' }}>
                           Scheduled: {new Date(post.scheduled_at).toLocaleString()}
@@ -173,6 +259,12 @@ export function PostsPage() {
                   <div style={{ background: '#f9fafb', padding: '12px', borderRadius: '8px', border: '1px solid #e5e7eb', whiteSpace: 'pre-wrap' }}>
                     {post.content}
                   </div>
+
+                  {post.approval_status === 'REJECTED' && post.rejection_reason && (
+                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem' }}>
+                      <strong>Changes Requested:</strong> {post.rejection_reason}
+                    </div>
+                  )}
 
                   {post.media_url && (
                     <div style={{ fontSize: '0.85rem', color: '#2563eb' }}>
@@ -192,16 +284,34 @@ export function PostsPage() {
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', borderTop: '1px solid #f3f4f6', paddingTop: '12px' }}>
+                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', borderTop: '1px solid #f3f4f6', paddingTop: '12px', flexWrap: 'wrap' }}>
+                    {canSubmitForReview && (
+                      <button
+                        type="button"
+                        onClick={() => submitReviewMutation.mutate(post.id)}
+                        disabled={submitReviewMutation.isPending}
+                        className="action-btn"
+                        style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}
+                      >
+                        {submitReviewMutation.isPending ? 'Submitting...' : 'Submit for Review'}
+                      </button>
+                    )}
                     {showPublish && (
                       <button
                         type="button"
                         onClick={() => publishMutation.mutate(post.id)}
-                        disabled={publishMutation.isPending}
+                        disabled={publishMutation.isPending || isApprovalBlocked}
+                        title={isApprovalBlocked ? 'Approval required before scheduling or publishing.' : 'Publish now'}
                         className="action-btn btn-refresh"
+                        style={{ opacity: isApprovalBlocked ? 0.5 : 1, cursor: isApprovalBlocked ? 'not-allowed' : 'pointer' }}
                       >
                         Publish Now
                       </button>
+                    )}
+                    {isCommunityManager && post.approval_status === 'NOT_REQUIRED' && (
+                      <span style={{ color: '#92400e', fontSize: '0.85rem', alignSelf: 'center' }}>
+                        Approval required before scheduling or publishing.
+                      </span>
                     )}
                     {showCancel && (
                       <button

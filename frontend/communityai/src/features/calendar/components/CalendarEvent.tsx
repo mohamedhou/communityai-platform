@@ -1,5 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../auth/hooks/useAuth'
 import type { Post } from '../../posts/types/post'
 import type { SocialAccount } from '../../social-accounts/types/social'
 
@@ -15,6 +16,7 @@ export function CalendarEvent({
   onDragStart,
 }: CalendarEventProps) {
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   // Find social account
   const account = socialAccounts.find((a) => a.id === post.social_account_id)
@@ -31,8 +33,12 @@ export function CalendarEvent({
     return `${hh}:${mm}`
   })()
 
-  // Draggable ONLY if status is SCHEDULED
-  const isDraggable = post.status === 'SCHEDULED'
+  // Draggable ONLY if status is SCHEDULED and not pending/rejected in approval
+  const isDraggable =
+    post.status === 'SCHEDULED' &&
+    post.approval_status !== 'PENDING' &&
+    post.approval_status !== 'REJECTED' &&
+    !(user?.role === 'COMMUNITY_MANAGER' && post.approval_status !== 'APPROVED')
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     if (!isDraggable) {
@@ -58,7 +64,7 @@ export function CalendarEvent({
       draggable={isDraggable}
       onDragStart={handleDragStart}
       onClick={handleClick}
-      title={`Click to edit. ${isDraggable ? 'Drag to move date.' : 'Cannot be moved.'}`}
+      title={`Click to edit. ${isDraggable ? 'Drag to move date.' : user?.role === 'COMMUNITY_MANAGER' && post.approval_status !== 'APPROVED' ? 'Approval required before scheduling or publishing.' : 'Cannot be moved.'}`}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
@@ -77,6 +83,52 @@ export function CalendarEvent({
         <span className={`calendar-event-status status-badge-${post.status.toLowerCase()}`}>
           {post.status}
         </span>
+
+        {post.approval_status === 'PENDING' && (
+          <span
+            style={{
+              fontSize: '0.68rem',
+              padding: '1px 5px',
+              borderRadius: '4px',
+              background: '#fef3c7',
+              color: '#92400e',
+              fontWeight: 700,
+            }}
+            title="Pending Review"
+          >
+            ⏳
+          </span>
+        )}
+        {post.approval_status === 'REJECTED' && (
+          <span
+            style={{
+              fontSize: '0.68rem',
+              padding: '1px 5px',
+              borderRadius: '4px',
+              background: '#fee2e2',
+              color: '#991b1b',
+              fontWeight: 700,
+            }}
+            title="Changes Requested / Rejected"
+          >
+            ✕
+          </span>
+        )}
+        {post.approval_status === 'APPROVED' && (
+          <span
+            style={{
+              fontSize: '0.68rem',
+              padding: '1px 5px',
+              borderRadius: '4px',
+              background: '#dcfce7',
+              color: '#166534',
+              fontWeight: 700,
+            }}
+            title="Approved"
+          >
+            ✓
+          </span>
+        )}
       </div>
 
       <div className="calendar-event-content">

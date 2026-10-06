@@ -16,6 +16,7 @@ import { SocialAccountsPage } from './features/social-accounts/pages/SocialAccou
 
 import { PostsPage } from './features/posts/pages/PostsPage'
 import { CreatePostPage } from './features/posts/pages/CreatePostPage'
+import { ReviewQueuePage } from './features/posts/pages/ReviewQueuePage'
 import { EditorialCalendarPage } from './features/calendar/pages/EditorialCalendarPage'
 import { AIAssistantPage } from './features/ai/pages/AIAssistantPage'
 import { InboxPage } from './features/inbox/pages/InboxPage'
@@ -124,6 +125,11 @@ function App() {
         <Route
           path="/posts/:postId/edit"
           element={<CreatePostPage />}
+        />
+
+        <Route
+          path="/posts/review"
+          element={<ReviewQueuePage />}
         />
 
         {/* Calendar */}
