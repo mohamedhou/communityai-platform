@@ -7,6 +7,18 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+_LOCAL_ENVIRONMENTS = {"local", "development", "test"}
+_PLACEHOLDER_SECRETS = {
+    "",
+    "change-me",
+    "change-me-in-dev",
+    "replace-me",
+    "your-secret",
+    "your-secret-here",
+    "ton_vrai_jwt_secret",
+}
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=Path(__file__).resolve().parents[3] / ".env",
@@ -15,6 +27,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "CommunityAI API"
+    environment: str = Field(default="development", alias="APP_ENV")
     api_v1_prefix: str = "/api/v1"
     backend_cors_origins: str = Field(
         default="http://localhost:5173",
@@ -83,7 +96,30 @@ class Settings(BaseSettings):
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
 
+    def validate_critical_secrets(self) -> None:
+        if self.environment.strip().lower() in _LOCAL_ENVIRONMENTS:
+            return
+
+        jwt_secret = self.jwt_secret_key.strip()
+        encryption_key = (self.social_token_encryption_key or "").strip()
+        if (
+            jwt_secret.lower() in _PLACEHOLDER_SECRETS
+            or len(jwt_secret) < 32
+            or not encryption_key
+            or encryption_key.lower() in _PLACEHOLDER_SECRETS
+        ):
+            raise RuntimeError("Critical production secrets are missing or invalid")
+
+        try:
+            from cryptography.fernet import Fernet
+
+            Fernet(encryption_key.encode("utf-8"))
+        except Exception as exc:
+            raise RuntimeError("Critical production secrets are missing or invalid") from exc
+
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    settings = Settings()
+    settings.validate_critical_secrets()
+    return settings
