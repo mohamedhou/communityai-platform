@@ -9,6 +9,7 @@ from app.models.post import PostApprovalStatus, PostStatus
 class PostBase(BaseModel):
     content: str = Field(..., min_length=1, max_length=5000)
     media_url: str | None = Field(default=None, max_length=2048)
+    media_asset_id: int | None = None
     social_account_id: int
 
 
@@ -19,6 +20,7 @@ class PostCreate(PostBase):
 class PostUpdate(BaseModel):
     content: str | None = Field(default=None, min_length=1, max_length=5000)
     media_url: str | None = Field(default=None, max_length=2048)
+    media_asset_id: int | None = None
     social_account_id: int | None = None
 
 
@@ -30,6 +32,7 @@ class PostResponse(BaseModel):
     social_account_id: int
     content: str
     media_url: str | None = None
+    media_asset_id: int | None = None
     scheduled_at: datetime | None = None
     published_at: datetime | None = None
     status: PostStatus

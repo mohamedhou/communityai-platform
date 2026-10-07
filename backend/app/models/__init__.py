@@ -2,6 +2,7 @@ from app.models.notification import Notification, NotificationType, Notification
 from app.models.refresh_token import RefreshToken
 from app.models.user import User, UserRole
 from app.models.post import Post, PostStatus
+from app.models.media_asset import MediaAsset, MediaKind
 from app.models.inbox_message import InboxMessage, InboxMessageType, InboxSentiment
 from app.models.analytics_snapshot import AnalyticsSnapshot
 from app.models.user_settings import UserSettings
@@ -24,6 +25,8 @@ __all__ = [
     "OAuthState",
     "Post",
     "PostStatus",
+    "MediaAsset",
+    "MediaKind",
     "InboxMessage",
     "InboxMessageType",
     "InboxSentiment",

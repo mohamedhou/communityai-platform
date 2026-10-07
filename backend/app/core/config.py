@@ -63,6 +63,8 @@ class Settings(BaseSettings):
 
     redis_host: str = Field(default="redis", alias="REDIS_HOST")
     redis_port: int = Field(default=6379, alias="REDIS_PORT")
+    media_root: str = Field(default="/app/media", alias="MEDIA_ROOT")
+    media_max_upload_bytes: int = Field(default=100 * 1024 * 1024, alias="MEDIA_MAX_UPLOAD_BYTES")
 
 
     @property

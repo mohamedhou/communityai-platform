@@ -40,7 +40,7 @@ export async function getPost(token: string, postId: number): Promise<Post> {
 
 export async function createPost(
   token: string,
-  payload: { content: string; social_account_id: number; media_url?: string }
+  payload: { content: string; social_account_id: number; media_url?: string; media_asset_id?: number | null }
 ): Promise<Post> {
   const res = await fetch(API_BASE, {
     method: 'POST',
@@ -60,7 +60,7 @@ export async function createPost(
 export async function updatePost(
   token: string,
   postId: number,
-  payload: { content?: string; social_account_id?: number; media_url?: string }
+  payload: { content?: string; social_account_id?: number; media_url?: string; media_asset_id?: number | null }
 ): Promise<Post> {
   const res = await fetch(`${API_BASE}/${postId}`, {
     method: 'PUT',

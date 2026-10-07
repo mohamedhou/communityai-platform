@@ -8,6 +8,7 @@ export interface Post {
   social_account_id: number;
   content: string;
   media_url?: string;
+  media_asset_id?: number | null;
   scheduled_at?: string;
   published_at?: string;
   status: PostStatus;
@@ -25,11 +26,13 @@ export interface CreatePostPayload {
   social_account_id: number
   content: string
   media_url?: string | null
+  media_asset_id?: number | null
 }
 
 export interface UpdatePostPayload {
   content?: string
   media_url?: string | null
+  media_asset_id?: number | null
   social_account_id?: number
 }
 

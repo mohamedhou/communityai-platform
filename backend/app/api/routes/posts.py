@@ -37,6 +37,7 @@ def create_post(
             social_account_id=payload.social_account_id,
             content=payload.content,
             media_url=payload.media_url,
+            media_asset_id=payload.media_asset_id,
         )
         return PostResponse.model_validate(post)
     except ValueError as exc:
@@ -52,7 +53,7 @@ def create_post(
     except PermissionError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Social account does not belong to your workspace",
+            detail="Media asset does not belong to your workspace" if str(exc) == "media_not_authorized" else "Social account does not belong to your workspace",
         ) from exc
 
 
@@ -129,6 +130,8 @@ def update_post(
             content=payload.content,
             media_url=payload.media_url,
             social_account_id=payload.social_account_id,
+            media_asset_id=payload.media_asset_id,
+            media_asset_id_provided="media_asset_id" in payload.model_fields_set,
         )
         return PostResponse.model_validate(updated_post)
     except ValueError as exc:
@@ -144,7 +147,7 @@ def update_post(
     except PermissionError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access resource",
+            detail="Media asset does not belong to your workspace" if str(exc) == "media_not_authorized" else "Not authorized to access resource",
         ) from exc
 
 

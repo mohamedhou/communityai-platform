@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.encryption import decrypt_token
 from app.models.post import Post, PostApprovalStatus, PostStatus
+from app.models.media_asset import MediaAsset
 from app.models.user import User
 from app.models.workspace import MembershipStatus, WorkspaceActivity, WorkspaceMember, WorkspaceRole
 from app.social.models import SocialAccount
@@ -40,6 +41,7 @@ class PostService:
         social_account_id: int,
         content: str,
         media_url: str | None = None,
+        media_asset_id: int | None = None,
         workspace_id: int | None = None,
     ) -> Post:
         social_account = self.db.get(SocialAccount, social_account_id)
@@ -51,12 +53,18 @@ class PostService:
         elif social_account.workspace_id != workspace_id:
             raise PermissionError("not_authorized")
 
+        if media_asset_id is not None:
+            asset = self.db.get(MediaAsset, media_asset_id)
+            if asset is None or asset.workspace_id != workspace_id:
+                raise PermissionError("media_not_authorized")
+
         post = Post(
             workspace_id=workspace_id,
             user_id=user_id,
             social_account_id=social_account_id,
             content=content,
             media_url=media_url,
+            media_asset_id=media_asset_id,
             status=PostStatus.DRAFT,
             approval_status=PostApprovalStatus.NOT_REQUIRED,
         )
@@ -99,12 +107,21 @@ class PostService:
         content: str | None = None,
         media_url: str | None = None,
         social_account_id: int | None = None,
+        media_asset_id: int | None = None,
+        media_asset_id_provided: bool = False,
     ) -> Post:
         post = self.get_post_by_id(workspace_id, post_id)
         if post.status not in (PostStatus.DRAFT, PostStatus.SCHEDULED, PostStatus.FAILED):
             raise ValueError("Cannot edit a post that is publishing or published")
 
         material_change = False
+        if media_asset_id_provided and media_asset_id != post.media_asset_id:
+            if media_asset_id is not None:
+                asset = self.db.get(MediaAsset, media_asset_id)
+                if asset is None or asset.workspace_id != workspace_id:
+                    raise PermissionError("media_not_authorized")
+            post.media_asset_id = media_asset_id
+            material_change = True
         if social_account_id is not None and social_account_id != post.social_account_id:
             social_account = self.db.get(SocialAccount, social_account_id)
             if not social_account:

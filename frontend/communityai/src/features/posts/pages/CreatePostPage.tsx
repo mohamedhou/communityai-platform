@@ -5,6 +5,8 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../auth/hooks/useAuth'
 import * as postApi from '../services/postApi'
 import { getSocialAccounts } from '../../social-accounts/services/socialApi'
+import type { MediaAsset } from '../../media/types/media'
+import { MediaPicker } from '../../media/components/MediaPicker'
 
 export function CreatePostPage() {
   const { accessToken, user } = useAuth()
@@ -17,6 +19,7 @@ export function CreatePostPage() {
   const locationContent = (location.state as { content?: string } | null)?.content || ''
   const [content, setContent] = useState(locationContent)
   const [mediaUrl, setMediaUrl] = useState('')
+  const [mediaAsset, setMediaAsset] = useState<MediaAsset | null>(null)
   const [socialAccountId, setSocialAccountId] = useState<number | ''>('')
   const [isScheduling, setIsScheduling] = useState(false)
   const [scheduledAt, setScheduledAt] = useState('')
@@ -46,6 +49,7 @@ export function CreatePostPage() {
     if (existingPost) {
       setContent(existingPost.content)
       setMediaUrl(existingPost.media_url || '')
+      setMediaAsset(null)
       setSocialAccountId(existingPost.social_account_id)
       if (existingPost.scheduled_at) {
         setIsScheduling(true)
@@ -77,7 +81,7 @@ export function CreatePostPage() {
   // Save as Draft mutation
   const saveMutation = useMutation({
     mutationFn: (params: {
-      payload: { content: string; social_account_id: number; media_url?: string }
+      payload: { content: string; social_account_id: number; media_url?: string; media_asset_id?: number | null }
       andSubmit?: boolean
     }) => {
       if (!accessToken) throw new Error('Not authenticated')
@@ -161,6 +165,7 @@ export function CreatePostPage() {
       content,
       social_account_id: Number(socialAccountId),
       media_url: mediaUrl || undefined,
+      media_asset_id: mediaAsset?.id ?? null,
     }
 
     if (action === 'publish') {
@@ -286,6 +291,11 @@ export function CreatePostPage() {
                 placeholder="https://example.com/image.png"
                 style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db' }}
               />
+            </div>
+
+            <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+              <strong>Workspace media</strong>
+              <MediaPicker value={mediaAsset} onChange={setMediaAsset} />
             </div>
 
             {/* Schedule Section */}

@@ -25,6 +25,7 @@ import { NotificationsPage } from './features/notifications/pages/NotificationsP
 import { SettingsPage } from './features/settings/pages/SettingsPage'
 import { AcceptInvitationPage } from './features/settings/pages/AcceptInvitationPage'
 import { ReportingPage } from './features/reporting/pages/ReportingPage'
+import { MediaLibraryPage } from './features/media/pages/MediaLibraryPage'
 
 
 function ProtectedLayout() {
@@ -130,6 +131,11 @@ function App() {
         <Route
           path="/posts/review"
           element={<ReviewQueuePage />}
+        />
+
+        <Route
+          path="/media"
+          element={<MediaLibraryPage />}
         />
 
         {/* Calendar */}
