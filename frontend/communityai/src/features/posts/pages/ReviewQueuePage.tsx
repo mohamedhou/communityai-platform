@@ -139,7 +139,7 @@ export function ReviewQueuePage() {
               <Link
                 to="/posts"
                 style={{
-                  color: '#2563eb',
+                  color: '#4f46e5',
                   textDecoration: 'none',
                   fontSize: '0.9rem',
                   fontWeight: 600,
@@ -159,9 +159,9 @@ export function ReviewQueuePage() {
         {!isReviewer && (
           <div
             style={{
-              background: '#eff6ff',
+              background: '#eef2ff',
               border: '1px solid #bfdbfe',
-              color: '#1e40af',
+              color: '#3730a3',
               padding: '12px 16px',
               borderRadius: '8px',
               marginBottom: '16px',
@@ -206,7 +206,7 @@ export function ReviewQueuePage() {
               background: 'none',
               border: 'none',
               borderBottom: activeTab === 'queue' ? '2px solid #2563eb' : '2px solid transparent',
-              color: activeTab === 'queue' ? '#2563eb' : '#6b7280',
+              color: activeTab === 'queue' ? '#4f46e5' : '#64748b',
               fontWeight: 600,
               fontSize: '0.95rem',
               cursor: 'pointer',
@@ -240,7 +240,7 @@ export function ReviewQueuePage() {
               background: 'none',
               border: 'none',
               borderBottom: activeTab === 'history' ? '2px solid #2563eb' : '2px solid transparent',
-              color: activeTab === 'history' ? '#2563eb' : '#6b7280',
+              color: activeTab === 'history' ? '#4f46e5' : '#64748b',
               fontWeight: 600,
               fontSize: '0.95rem',
               cursor: 'pointer',
@@ -334,12 +334,12 @@ export function ReviewQueuePage() {
                             ⏳ Pending Review
                           </span>
                           {post.submitted_for_review_at && (
-                            <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '4px' }}>
+                            <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
                               Submitted: {new Date(post.submitted_for_review_at).toLocaleString()}
                             </div>
                           )}
                           {post.scheduled_at && (
-                            <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '2px' }}>
+                            <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>
                               Target Schedule: {new Date(post.scheduled_at).toLocaleString()}
                             </div>
                           )}
@@ -363,7 +363,7 @@ export function ReviewQueuePage() {
 
                       {/* Media preview */}
                       {post.media_url && (
-                        <div style={{ fontSize: '0.85rem', color: '#2563eb' }}>
+                        <div style={{ fontSize: '0.85rem', color: '#4f46e5' }}>
                           Media Attachment:{' '}
                           <a href={post.media_url} target="_blank" rel="noreferrer">
                             {post.media_url}
@@ -495,7 +495,7 @@ export function ReviewQueuePage() {
                             {isApproved ? '✓ APPROVED' : '✕ REJECTED'}
                           </span>
                           {post.reviewed_at && (
-                            <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '4px' }}>
+                            <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
                               Reviewed: {new Date(post.reviewed_at).toLocaleString()}
                             </div>
                           )}

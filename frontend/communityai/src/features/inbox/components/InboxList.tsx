@@ -12,6 +12,7 @@ interface InboxListProps {
   onResetFilters: () => void
   onSeedMock?: () => void
   isSeeding?: boolean
+  isMockMode?: boolean
 }
 
 export function InboxList({
@@ -24,6 +25,7 @@ export function InboxList({
   onResetFilters,
   onSeedMock,
   isSeeding,
+  isMockMode = false,
 }: InboxListProps) {
   if (isLoading) {
     return (
@@ -41,6 +43,7 @@ export function InboxList({
         onResetFilters={onResetFilters}
         onSeedMock={onSeedMock}
         isSeeding={isSeeding}
+        isMockMode={isMockMode}
       />
     )
   }

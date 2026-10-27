@@ -68,3 +68,15 @@ export async function adaptPlatform(token: string, payload: AIAdaptPlatformPaylo
 export async function generateIdeas(token: string, payload: AIIdeasPayload): Promise<AIResponse> {
   return postAI('/ideas', token, payload)
 }
+
+export async function getAIStatus(token: string): Promise<import('../types/ai').AIProviderStatus> {
+  const res = await fetch(`${API_BASE}/status`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (!res.ok) {
+    throw new Error('Failed to fetch AI provider status')
+  }
+  return res.json()
+}

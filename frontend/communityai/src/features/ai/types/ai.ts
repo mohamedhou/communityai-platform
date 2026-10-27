@@ -15,6 +15,7 @@ export type AITone =
   | 'FRIENDLY'
   | 'TECHNICAL'
   | 'PROMOTIONAL'
+  | 'HUMOROUS'
 
 export type AIPlatform = 'FACEBOOK' | 'INSTAGRAM' | 'LINKEDIN'
 
@@ -31,6 +32,15 @@ export interface AIResponse {
   ideas?: string[] | null
 }
 
+export interface AIProviderStatus {
+  provider: string
+  model: string
+  available: boolean
+  base_url?: string | null
+  error?: string | null
+  installed_models?: string[]
+}
+
 export interface AIGeneratePayload {
   prompt: string
   platform?: AIPlatform
@@ -38,6 +48,10 @@ export interface AIGeneratePayload {
   audience?: string
   objective?: string
   editorial_context?: string
+  language?: string
+  length?: string
+  include_hashtags?: boolean
+  include_cta?: boolean
 }
 
 export interface AIRewritePayload {
@@ -45,24 +59,34 @@ export interface AIRewritePayload {
   tone?: AITone
   platform?: AIPlatform
   editorial_context?: string
+  language?: string
+  include_hashtags?: boolean
+  include_cta?: boolean
 }
 
 export interface AIImprovePayload {
   content: string
   platform?: AIPlatform
   editorial_context?: string
+  language?: string
+  include_hashtags?: boolean
+  include_cta?: boolean
 }
 
 export interface AIShortenPayload {
   content: string
   platform?: AIPlatform
   editorial_context?: string
+  language?: string
 }
 
 export interface AIExpandPayload {
   content: string
   platform?: AIPlatform
   editorial_context?: string
+  language?: string
+  include_hashtags?: boolean
+  include_cta?: boolean
 }
 
 export interface AIChangeTonePayload {
@@ -70,6 +94,7 @@ export interface AIChangeTonePayload {
   tone: AITone
   platform?: AIPlatform
   editorial_context?: string
+  language?: string
 }
 
 export interface AIAdaptPlatformPayload {
@@ -77,6 +102,9 @@ export interface AIAdaptPlatformPayload {
   platform: AIPlatform
   tone?: AITone
   editorial_context?: string
+  language?: string
+  include_hashtags?: boolean
+  include_cta?: boolean
 }
 
 export interface AIIdeasPayload {
@@ -85,6 +113,7 @@ export interface AIIdeasPayload {
   tone?: AITone
   target_audience?: string
   editorial_context?: string
+  language?: string
 }
 
 export interface AIHistoryItem {

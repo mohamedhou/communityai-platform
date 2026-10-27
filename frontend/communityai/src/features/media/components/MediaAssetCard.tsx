@@ -1,18 +1,45 @@
 import type { MediaAsset } from '../types/media'
 import { MediaPreview } from './MediaPreview'
 
-export function MediaAssetCard({ asset, selected, onSelect, onDelete }: {
+export function MediaAssetCard({
+  asset,
+  selected,
+  onSelect,
+  onDelete,
+}: {
   asset: MediaAsset
   selected?: boolean
   onSelect?: () => void
   onDelete?: () => void
 }) {
   return (
-    <article style={{ border: selected ? '2px solid #2563eb' : '1px solid #e5e7eb', padding: '12px', borderRadius: '8px' }}>
-      <MediaPreview asset={asset} />
-      <p style={{ overflowWrap: 'anywhere' }}>{asset.original_filename}</p>
-      {onSelect && <button type="button" onClick={onSelect}>{selected ? 'Selected' : 'Select'}</button>}{' '}
-      {onDelete && <button type="button" onClick={onDelete}>Delete</button>}
+    <article className={`media-asset-card ${selected ? 'selected' : ''}`}>
+      <div className="media-asset-preview-container">
+        <MediaPreview asset={asset} />
+      </div>
+      <p className="media-asset-filename" title={asset.original_filename}>
+        {asset.original_filename}
+      </p>
+      <div className="media-asset-actions">
+        {onSelect && (
+          <button
+            type="button"
+            className={`btn-action ${selected ? 'active' : ''}`}
+            onClick={onSelect}
+          >
+            {selected ? 'Selected' : 'Select'}
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            className="btn-danger-outline"
+            onClick={onDelete}
+          >
+            Delete
+          </button>
+        )}
+      </div>
     </article>
   )
 }

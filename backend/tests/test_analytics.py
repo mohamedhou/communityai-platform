@@ -269,6 +269,15 @@ def test_analytics_date_and_platform_filtering(client, db_session: Session):
     assert len(pts) == 1
     assert pts[0]["impressions"] == 2000
 
+    # Custom date range must be forwarded to the API contract.
+    res_custom = client.get(
+        f"/api/v1/analytics/summary?platform=facebook&start_date={today.isoformat()}&end_date={today.isoformat()}",
+        headers=headers,
+    )
+    assert res_custom.status_code == 200
+    assert res_custom.json()["period_start"] == today.isoformat()
+    assert res_custom.json()["period_end"] == today.isoformat()
+
 
 def test_analytics_top_posts(client, db_session: Session):
     token, user, account = _setup_user_and_social(client, db_session, email="topposts_test@example.com")
@@ -311,6 +320,13 @@ def test_analytics_seed_mock_authorization(client, db_session: Session, monkeypa
     res_mock = client.post("/api/v1/analytics/seed-mock?days=14", headers=headers)
     assert res_mock.status_code == 201
     assert res_mock.json()["snapshots_created"] > 0
+
+    summary_after_seed = client.get("/api/v1/analytics/summary?days=14", headers=headers)
+    timeseries_after_seed = client.get("/api/v1/analytics/timeseries?days=14", headers=headers)
+    assert summary_after_seed.status_code == 200
+    assert summary_after_seed.json()["kpis"]["total_reach"] > 0
+    assert timeseries_after_seed.status_code == 200
+    assert len(timeseries_after_seed.json()["points"]) > 0
 
     # Seed forbidden when mock mode is disabled
     settings = get_settings()

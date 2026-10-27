@@ -9,6 +9,7 @@ interface AnalyticsFiltersProps {
   onRefresh: () => void
   onSeedMock: () => void
   isSeeding?: boolean
+  isMockMode?: boolean
 }
 
 export function AnalyticsFilters({
@@ -18,6 +19,7 @@ export function AnalyticsFilters({
   onRefresh,
   onSeedMock,
   isSeeding = false,
+  isMockMode = false,
 }: AnalyticsFiltersProps) {
   const [showCustomDates, setShowCustomDates] = useState(false)
 
@@ -58,6 +60,14 @@ export function AnalyticsFilters({
 
   const currentPlatform = filters.platform || 'ALL'
   const currentDays = filters.days || 30
+
+  const handleCustomDatesToggle = () => {
+    const next = !showCustomDates
+    setShowCustomDates(next)
+    if (next) {
+      onChange({ ...filters, days: undefined })
+    }
+  }
 
   // Filter accounts by active platform if platform is selected
   const visibleAccounts = accounts.filter((acc) => {
@@ -149,7 +159,7 @@ export function AnalyticsFilters({
             <button
               type="button"
               className={`pill-btn ${showCustomDates ? 'active' : ''}`}
-              onClick={() => setShowCustomDates(!showCustomDates)}
+              onClick={handleCustomDatesToggle}
             >
               📅 Personnalisé
             </button>
@@ -190,10 +200,10 @@ export function AnalyticsFilters({
           type="button"
           className="btn btn-outline"
           onClick={onSeedMock}
-          disabled={isSeeding}
-          title="Générer 30 jours de données simulées pour vos comptes"
+          disabled={isSeeding || !isMockMode}
+          title={isMockMode ? 'Générer 30 jours de données simulées pour vos comptes' : 'Le mode démo est désactivé'}
         >
-          {isSeeding ? 'Génération...' : '🧪 Données démo'}
+          {isSeeding ? 'Génération...' : isMockMode ? '🧪 Données démo' : 'Démo désactivée'}
         </button>
       </div>
     </div>

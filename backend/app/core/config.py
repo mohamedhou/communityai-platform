@@ -68,7 +68,9 @@ class Settings(BaseSettings):
     social_token_encryption_key: str | None = Field(default=None, alias="SOCIAL_TOKEN_ENCRYPTION_KEY")
     social_mock_mode: bool = Field(default=False, alias="SOCIAL_MOCK_MODE")
 
-    ai_provider: str = Field(default="mock", alias="AI_PROVIDER")
+    ai_provider: str = Field(default="ollama", alias="AI_PROVIDER")
+    ollama_base_url: str = Field(default="http://host.docker.internal:11434", alias="OLLAMA_BASE_URL")
+    ollama_model: str = Field(default="llama3.2:3b", alias="OLLAMA_MODEL")
     openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-4o-mini", alias="OPENAI_MODEL")
     gemini_api_key: str | None = Field(default=None, alias="GEMINI_API_KEY")

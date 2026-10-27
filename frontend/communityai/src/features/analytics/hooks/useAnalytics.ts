@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { useAuth } from '../../auth/hooks/useAuth'
-import { getSocialAccounts } from '../../social-accounts/services/socialApi'
+import { getSocialAccounts, getSocialConnectionMode } from '../../social-accounts/services/socialApi'
 import {
   getAnalyticsSummary,
   getAnalyticsTimeSeries,
@@ -27,6 +27,15 @@ export function useAnalytics() {
     queryFn: () => {
       if (!accessToken) throw new Error('Not authenticated')
       return getSocialAccounts(accessToken)
+    },
+    enabled: !!accessToken,
+  })
+
+  const { data: connectionMode } = useQuery({
+    queryKey: ['social-connection-mode'],
+    queryFn: () => {
+      if (!accessToken) throw new Error('Not authenticated')
+      return getSocialConnectionMode(accessToken)
     },
     enabled: !!accessToken,
   })
@@ -106,6 +115,7 @@ export function useAnalytics() {
     filters,
     setFilters,
     accounts,
+    isMockMode: connectionMode?.mock_mode ?? false,
     summary: summaryData,
     timeSeries: timeSeriesData?.points || [],
     topPosts: topPostsData?.items || [],

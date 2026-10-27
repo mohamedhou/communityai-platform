@@ -3,6 +3,7 @@ interface InboxEmptyStateProps {
   onResetFilters?: () => void
   onSeedMock?: () => void
   isSeeding?: boolean
+  isMockMode?: boolean
 }
 
 export function InboxEmptyState({
@@ -10,6 +11,7 @@ export function InboxEmptyState({
   onResetFilters,
   onSeedMock,
   isSeeding = false,
+  isMockMode = false,
 }: InboxEmptyStateProps) {
   return (
     <div className="inbox-empty-state">
@@ -30,7 +32,7 @@ export function InboxEmptyState({
             Réinitialiser les filtres
           </button>
         )}
-        {onSeedMock && (
+        {onSeedMock && isMockMode && (
           <button
             type="button"
             className="btn btn-primary"

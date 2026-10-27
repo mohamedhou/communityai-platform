@@ -28,6 +28,10 @@ export function InboxPage() {
     isSuggesting,
     isSending,
     isSeeding,
+    isMockMode,
+    page,
+    totalPages,
+    setPage,
   } = useInbox()
 
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -132,6 +136,7 @@ export function InboxPage() {
             onResetFilters={resetFilters}
             onSeedMock={handleSeedMock}
             isSeeding={isSeeding}
+            isMockMode={isMockMode}
           />
         </section>
 
@@ -148,6 +153,17 @@ export function InboxPage() {
           />
         </section>
       </div>
+      {totalPages > 1 && (
+        <nav className="inbox-pagination" aria-label="Pagination des interactions">
+          <button type="button" className="btn btn-secondary" onClick={() => setPage(page - 1)} disabled={page === 0 || isLoading}>
+            Précédent
+          </button>
+          <span>Page {page + 1} sur {totalPages}</span>
+          <button type="button" className="btn btn-secondary" onClick={() => setPage(page + 1)} disabled={page + 1 >= totalPages || isLoading}>
+            Suivant
+          </button>
+        </nav>
+      )}
     </div>
   )
 }

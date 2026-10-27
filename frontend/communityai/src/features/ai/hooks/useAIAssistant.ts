@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 
 import { useAuth } from '../../auth/hooks/useAuth'
 import * as aiApi from '../services/aiApi'
@@ -29,10 +29,31 @@ export function useAIAssistant() {
   const [editorialContext, setEditorialContext] = useState('')
   const [showEditorialContext, setShowEditorialContext] = useState(false)
 
+  // New Generation Controls
+  const [language, setLanguage] = useState('fr')
+  const [length, setLength] = useState<'short' | 'medium' | 'long' | ''>('')
+  const [includeHashtags, setIncludeHashtags] = useState<boolean>(true)
+  const [includeCta, setIncludeCta] = useState<boolean>(true)
+
   // Result & UI State
   const [result, setResult] = useState<AIResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+
+  // Provider Status Query
+  const {
+    data: providerStatus,
+    isLoading: isStatusLoading,
+    refetch: refetchStatus,
+  } = useQuery({
+    queryKey: ['ai-provider-status'],
+    queryFn: () => {
+      if (!accessToken) throw new Error('Not authenticated')
+      return aiApi.getAIStatus(accessToken)
+    },
+    enabled: !!accessToken,
+    refetchInterval: 30000,
+  })
 
   // History State
   const [history, setHistory] = useState<AIHistoryItem[]>(() => {
@@ -60,10 +81,11 @@ export function useAIAssistant() {
 
       const plat = platform ? (platform as AIPlatform) : undefined
       const editCtx = editorialContext.trim() || undefined
+      const lenVal = length || undefined
 
       switch (action) {
         case 'GENERATE': {
-          if (!prompt.trim()) throw new Error('Please enter a topic or instructions.')
+          if (!prompt.trim()) throw new Error('Veuillez saisir un sujet ou une instruction.')
           return aiApi.generatePost(accessToken, {
             prompt: prompt.trim(),
             platform: plat,
@@ -71,77 +93,95 @@ export function useAIAssistant() {
             audience: audience.trim() || undefined,
             objective: objective.trim() || undefined,
             editorial_context: editCtx,
+            language,
+            length: lenVal,
+            include_hashtags: includeHashtags,
+            include_cta: includeCta,
           })
         }
         case 'REWRITE': {
-          if (!content.trim()) throw new Error('Please enter text to rewrite.')
+          if (!content.trim()) throw new Error('Veuillez saisir le texte à réécrire.')
           return aiApi.rewriteContent(accessToken, {
             content: content.trim(),
             tone,
             platform: plat,
             editorial_context: editCtx,
+            language,
+            include_hashtags: includeHashtags,
+            include_cta: includeCta,
           })
         }
         case 'IMPROVE': {
-          if (!content.trim()) throw new Error('Please enter text to improve.')
+          if (!content.trim()) throw new Error('Veuillez saisir le texte à améliorer.')
           return aiApi.improveContent(accessToken, {
             content: content.trim(),
             platform: plat,
             editorial_context: editCtx,
+            language,
+            include_hashtags: includeHashtags,
+            include_cta: includeCta,
           })
         }
         case 'SHORTEN': {
-          if (!content.trim()) throw new Error('Please enter text to shorten.')
+          if (!content.trim()) throw new Error('Veuillez saisir le texte à raccourcir.')
           return aiApi.shortenContent(accessToken, {
             content: content.trim(),
             platform: plat,
             editorial_context: editCtx,
+            language,
           })
         }
         case 'EXPAND': {
-          if (!content.trim()) throw new Error('Please enter text to expand.')
+          if (!content.trim()) throw new Error('Veuillez saisir le texte à développer.')
           return aiApi.expandContent(accessToken, {
             content: content.trim(),
             platform: plat,
             editorial_context: editCtx,
+            language,
+            include_hashtags: includeHashtags,
+            include_cta: includeCta,
           })
         }
         case 'CHANGE_TONE': {
-          if (!content.trim()) throw new Error('Please enter text to transform.')
+          if (!content.trim()) throw new Error('Veuillez saisir le texte dont vous souhaitez changer le ton.')
           return aiApi.changeTone(accessToken, {
             content: content.trim(),
             tone,
             platform: plat,
             editorial_context: editCtx,
+            language,
           })
         }
         case 'ADAPT_PLATFORM': {
-          if (!content.trim()) throw new Error('Please enter text to adapt.')
-          if (!platform) throw new Error('Please select a target platform.')
+          if (!content.trim()) throw new Error('Veuillez saisir le texte à adapter.')
+          if (!platform) throw new Error('Veuillez sélectionner un réseau social cible.')
           return aiApi.adaptPlatform(accessToken, {
             content: content.trim(),
             platform: platform as AIPlatform,
             tone,
             editorial_context: editCtx,
+            language,
+            include_hashtags: includeHashtags,
+            include_cta: includeCta,
           })
         }
         case 'IDEATE': {
-          if (!prompt.trim()) throw new Error('Please enter a topic or industry for brainstorming.')
+          if (!prompt.trim()) throw new Error('Veuillez entrer un sujet pour générer des idées.')
           return aiApi.generateIdeas(accessToken, {
             topic: prompt.trim(),
             platform: plat,
             tone,
             target_audience: audience.trim() || undefined,
             editorial_context: editCtx,
+            language,
           })
         }
         default:
-          throw new Error('Unsupported AI action')
+          throw new Error('Action IA non supportée')
       }
     },
     onSuccess: (data) => {
       setResult(data)
-      // Prepend to history
       const snippet = action === 'IDEATE' || action === 'GENERATE' ? prompt : content
       const historyItem: AIHistoryItem = {
         id: `${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -155,9 +195,13 @@ export function useAIAssistant() {
       setHistory((prev) => [historyItem, ...prev.slice(0, 19)])
     },
     onError: (err: any) => {
-      setError(err?.message || 'AI generation failed. Please try again.')
+      setError(err?.message || 'La génération IA a échoué. Veuillez réessayer.')
     },
   })
+
+  const updateResultContent = useCallback((newContent: string) => {
+    setResult((prev) => (prev ? { ...prev, content: newContent } : null))
+  }, [])
 
   const handleCopy = useCallback((textToCopy?: string) => {
     const text = textToCopy || result?.content
@@ -209,10 +253,22 @@ export function useAIAssistant() {
     setEditorialContext,
     showEditorialContext,
     setShowEditorialContext,
+    language,
+    setLanguage,
+    length,
+    setLength,
+    includeHashtags,
+    setIncludeHashtags,
+    includeCta,
+    setIncludeCta,
     result,
+    updateResultContent,
     error,
     copied,
     isLoading: aiMutation.isPending,
+    providerStatus,
+    isStatusLoading,
+    refetchStatus,
     history,
     generate: aiMutation.mutate,
     handleCopy,

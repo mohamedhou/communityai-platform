@@ -14,23 +14,46 @@ interface AIOptionsProps {
   onEditorialContextChange: (c: string) => void
   showEditorialContext: boolean
   onToggleEditorialContext: () => void
+  language?: string
+  onLanguageChange?: (lang: string) => void
+  length?: 'short' | 'medium' | 'long' | ''
+  onLengthChange?: (len: 'short' | 'medium' | 'long' | '') => void
+  includeHashtags?: boolean
+  onIncludeHashtagsChange?: (val: boolean) => void
+  includeCta?: boolean
+  onIncludeCtaChange?: (val: boolean) => void
   disabled?: boolean
 }
 
 const TONES: { key: AITone; label: string }[] = [
-  { key: 'PROFESSIONAL', label: '💼 Professional' },
-  { key: 'CASUAL', label: '☕ Casual' },
-  { key: 'FRIENDLY', label: '🤝 Friendly' },
-  { key: 'FORMAL', label: '🏛️ Formal' },
-  { key: 'PROMOTIONAL', label: '🔥 Promotional' },
-  { key: 'TECHNICAL', label: '⚙️ Technical' },
+  { key: 'PROFESSIONAL', label: '💼 Professionnel' },
+  { key: 'FRIENDLY', label: '🤝 Amical & Chaleureux' },
+  { key: 'HUMOROUS', label: '🎭 Humoristique & Décalé' },
+  { key: 'PROMOTIONAL', label: '🔥 Commercial & Promotionnel' },
+  { key: 'CASUAL', label: '☕ Décontracté' },
+  { key: 'FORMAL', label: '🏛️ Formel' },
+  { key: 'TECHNICAL', label: '⚙️ Technique' },
 ]
 
 const PLATFORMS: { key: AIPlatform | ''; label: string }[] = [
   { key: 'LINKEDIN', label: 'LinkedIn' },
   { key: 'INSTAGRAM', label: 'Instagram' },
   { key: 'FACEBOOK', label: 'Facebook' },
-  { key: '', label: 'General / Multi-channel' },
+  { key: '', label: 'Général / Multi-réseaux' },
+]
+
+const LANGUAGES: { key: string; label: string }[] = [
+  { key: 'fr', label: '🇫🇷 Français' },
+  { key: 'en', label: '🇬🇧 Anglais' },
+  { key: 'es', label: '🇪🇸 Espagnol' },
+  { key: 'de', label: '🇩🇪 Allemand' },
+]
+
+const LENGTHS: { key: 'short' | 'medium' | 'long' | ''; label: string }[] = [
+  { key: '', label: 'Automatique' },
+  { key: 'short', label: 'Court (1-3 phrases)' },
+  { key: 'medium', label: 'Moyen (1-2 paragraphes)' },
+  { key: 'long', label: 'Long (détaillé & structuré)' },
 ]
 
 export function AIOptions({
@@ -47,6 +70,14 @@ export function AIOptions({
   onEditorialContextChange,
   showEditorialContext,
   onToggleEditorialContext,
+  language = 'fr',
+  onLanguageChange,
+  length = '',
+  onLengthChange,
+  includeHashtags = true,
+  onIncludeHashtagsChange,
+  includeCta = true,
+  onIncludeCtaChange,
   disabled = false,
 }: AIOptionsProps) {
   const showAudienceObjective = action === 'GENERATE' || action === 'IDEATE'
@@ -59,7 +90,7 @@ export function AIOptions({
         {/* Platform Selector */}
         <div className="ai-option-field">
           <label htmlFor="ai-platform-select" className="ai-field-label">
-            Platform {isPlatformRequired && <span className="required-star">*</span>}
+            Réseau social {isPlatformRequired && <span className="required-star">*</span>}
           </label>
           <select
             id="ai-platform-select"
@@ -79,7 +110,7 @@ export function AIOptions({
         {/* Tone Selector */}
         <div className="ai-option-field">
           <label htmlFor="ai-tone-select" className="ai-field-label">
-            Tone {isToneRequired && <span className="required-star">*</span>}
+            Ton de voix {isToneRequired && <span className="required-star">*</span>}
           </label>
           <select
             id="ai-tone-select"
@@ -97,18 +128,95 @@ export function AIOptions({
         </div>
       </div>
 
+      <div className="ai-options-row">
+        {/* Language Selector */}
+        {onLanguageChange && (
+          <div className="ai-option-field">
+            <label htmlFor="ai-language-select" className="ai-field-label">
+              Langue
+            </label>
+            <select
+              id="ai-language-select"
+              disabled={disabled}
+              value={language}
+              onChange={(e) => onLanguageChange(e.target.value)}
+              className="ai-select-input"
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l.key} value={l.key}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Length Selector */}
+        {onLengthChange && action !== 'SHORTEN' && action !== 'EXPAND' && (
+          <div className="ai-option-field">
+            <label htmlFor="ai-length-select" className="ai-field-label">
+              Longueur souhaitée
+            </label>
+            <select
+              id="ai-length-select"
+              disabled={disabled}
+              value={length}
+              onChange={(e) => onLengthChange(e.target.value as any)}
+              className="ai-select-input"
+            >
+              {LENGTHS.map((l) => (
+                <option key={l.key} value={l.key}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* Toggles for Hashtags and CTA */}
+      {(onIncludeHashtagsChange || onIncludeCtaChange) && (
+        <div className="ai-toggles-row" style={{ display: 'flex', gap: '20px', marginTop: '4px', flexWrap: 'wrap' }}>
+          {onIncludeHashtagsChange && (
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem' }}>
+              <input
+                type="checkbox"
+                checked={includeHashtags}
+                disabled={disabled}
+                onChange={(e) => onIncludeHashtagsChange(e.target.checked)}
+                style={{ accentColor: '#4f46e5', width: '16px', height: '16px' }}
+              />
+              Inclure des hashtags pertinents (#)
+            </label>
+          )}
+
+          {onIncludeCtaChange && (
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem' }}>
+              <input
+                type="checkbox"
+                checked={includeCta}
+                disabled={disabled}
+                onChange={(e) => onIncludeCtaChange(e.target.checked)}
+                style={{ accentColor: '#4f46e5', width: '16px', height: '16px' }}
+              />
+              Inclure un appel à l'action (CTA)
+            </label>
+          )}
+        </div>
+      )}
+
       {/* Optional Audience & Objective for Generate/Ideate */}
       {showAudienceObjective && (
         <div className="ai-options-row">
           <div className="ai-option-field">
             <label htmlFor="ai-audience-input" className="ai-field-label">
-              Target Audience <span className="optional-tag">(optional)</span>
+              Public cible <span className="optional-tag">(optionnel)</span>
             </label>
             <input
               id="ai-audience-input"
               type="text"
               disabled={disabled}
-              placeholder="e.g. CMOs, Freelancers, Gen-Z creators"
+              placeholder="ex: Directeurs Marketing, Freelances, Étudiants..."
               value={audience}
               onChange={(e) => onAudienceChange(e.target.value)}
               className="ai-text-input"
@@ -117,13 +225,13 @@ export function AIOptions({
 
           <div className="ai-option-field">
             <label htmlFor="ai-objective-input" className="ai-field-label">
-              Goal / Objective <span className="optional-tag">(optional)</span>
+              Objectif de la publication <span className="optional-tag">(optionnel)</span>
             </label>
             <input
               id="ai-objective-input"
               type="text"
               disabled={disabled}
-              placeholder="e.g. Engagement, Product Launch, Event Signups"
+              placeholder="ex: Engagement, Lancement produit, Inscriptions webinaire..."
               value={objective}
               onChange={(e) => onObjectiveChange(e.target.value)}
               className="ai-text-input"
@@ -139,7 +247,7 @@ export function AIOptions({
           onClick={onToggleEditorialContext}
           className="ai-editorial-toggle"
         >
-          <span>{showEditorialContext ? '▾' : '▸'} Brand Editorial Guidelines</span>
+          <span>{showEditorialContext ? '▾' : '▸'} Charte éditoriale de la marque</span>
           {editorialContext.trim() && <span className="ai-badge-active">Active</span>}
         </button>
 
@@ -148,13 +256,13 @@ export function AIOptions({
             <textarea
               rows={3}
               disabled={disabled}
-              placeholder="e.g. Always professional, positive tone, avoid aggressive slang, highlight innovation and sustainability."
+              placeholder="ex: Toujours bienveillant, éviter le jargon trop complexe, mettre en avant l'innovation et la transparence."
               value={editorialContext}
               onChange={(e) => onEditorialContextChange(e.target.value)}
               className="ai-textarea-input"
             />
             <span className="ai-field-hint">
-              These guidelines are directly integrated into the prompt to respect your brand identity.
+              Ces consignes sont directement intégrées au modèle IA pour respecter l'identité de marque.
             </span>
           </div>
         )}

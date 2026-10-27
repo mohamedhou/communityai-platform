@@ -5,6 +5,7 @@ import re
 from app.ai.base import AIProvider, AIProviderResult
 from app.ai.providers.gemini import GeminiProvider
 from app.ai.providers.mock import MockAIProvider
+from app.ai.providers.ollama import OllamaProvider
 from app.ai.providers.openai import OpenAIProvider
 from app.core.config import get_settings
 from app.schemas.ai import (
@@ -16,6 +17,7 @@ from app.schemas.ai import (
     AIIdeasRequest,
     AIImproveRequest,
     AIPlatform,
+    AIProviderStatusResponse,
     AIResponse,
     AIRewriteRequest,
     AIShortenRequest,
@@ -31,12 +33,57 @@ class AIService:
         else:
             settings = get_settings()
             provider_name = (settings.ai_provider or "mock").lower().strip()
-            if provider_name == "openai":
+            if provider_name == "ollama":
+                self.provider = OllamaProvider()
+            elif provider_name == "openai":
                 self.provider = OpenAIProvider()
             elif provider_name == "gemini":
                 self.provider = GeminiProvider()
             else:
                 self.provider = MockAIProvider()
+
+    def get_status(self) -> AIProviderStatusResponse:
+        settings = get_settings()
+        provider_name = (settings.ai_provider or "mock").lower().strip()
+
+        if isinstance(self.provider, OllamaProvider):
+            info = self.provider.check_availability()
+            return AIProviderStatusResponse(
+                provider="ollama",
+                model=self.provider.model,
+                available=info.get("available", False),
+                base_url=self.provider.base_url,
+                error=info.get("error"),
+                installed_models=info.get("installed_models", []),
+            )
+        elif isinstance(self.provider, OpenAIProvider):
+            has_key = bool(self.provider.api_key)
+            return AIProviderStatusResponse(
+                provider="openai",
+                model=self.provider.model,
+                available=has_key,
+                error=None if has_key else "OpenAI API key is missing",
+            )
+        elif isinstance(self.provider, GeminiProvider):
+            has_key = bool(self.provider.api_key)
+            return AIProviderStatusResponse(
+                provider="gemini",
+                model=self.provider.model,
+                available=has_key,
+                error=None if has_key else "Gemini API key is missing",
+            )
+        elif isinstance(self.provider, MockAIProvider):
+            return AIProviderStatusResponse(
+                provider="mock",
+                model="deterministic-mock",
+                available=True,
+            )
+        else:
+            return AIProviderStatusResponse(
+                provider=provider_name,
+                model="unknown",
+                available=True,
+            )
 
     def _build_system_prompt(
         self,
@@ -44,12 +91,30 @@ class AIService:
         tone: AITone | None = None,
         editorial_context: str | None = None,
         action_instruction: str | None = None,
+        language: str | None = None,
+        length: str | None = None,
+        include_hashtags: bool | None = None,
+        include_cta: bool | None = None,
     ) -> str:
         instructions = [
             "You are an expert Social Media Copywriter and Community Strategist.",
             "Generate clean, ready-to-publish social media copy without markdown meta-chatter.",
         ]
 
+        # Language constraint
+        lang = (language or "fr").lower().strip()
+        if lang in {"fr", "french", "français"}:
+            instructions.append(
+                "Language: Rédige impérativement le contenu en Français naturel, fluide et percutant."
+            )
+        elif lang in {"en", "english"}:
+            instructions.append(
+                "Language: Write strictly in natural, engaging English."
+            )
+        elif lang:
+            instructions.append(f"Language: Write strictly in {lang}.")
+
+        # Platform formatting
         if platform:
             if platform == AIPlatform.LINKEDIN:
                 instructions.append(
@@ -64,6 +129,7 @@ class AIService:
                     "Platform: Facebook. Use a conversational, community-first tone that invites comments and discussions, with 1-3 hashtags."
                 )
 
+        # Tone of voice
         if tone:
             tone_descriptions = {
                 AITone.FORMAL: "Tone: Formal, authoritative, precise, and polite.",
@@ -71,10 +137,33 @@ class AIService:
                 AITone.CASUAL: "Tone: Casual, natural, relatable, and approachable.",
                 AITone.FRIENDLY: "Tone: Warm, enthusiastic, welcoming, and friendly.",
                 AITone.TECHNICAL: "Tone: Technical, detailed, analytical, and informative.",
-                AITone.PROMOTIONAL: "Tone: Persuasive, action-oriented, exciting, and promotional.",
+                AITone.PROMOTIONAL: "Tone: Persuasive, action-oriented, exciting, and commercial.",
+                AITone.HUMOROUS: "Tone: Humorous, witty, playful, and entertaining.",
             }
             if tone in tone_descriptions:
                 instructions.append(tone_descriptions[tone])
+
+        # Length preference
+        if length:
+            len_lower = length.lower().strip()
+            if len_lower in {"short", "court"}:
+                instructions.append("Length: Short and punchy (1 to 3 sentences maximum).")
+            elif len_lower in {"medium", "moyen"}:
+                instructions.append("Length: Medium (1 to 2 well-structured paragraphs).")
+            elif len_lower in {"long"}:
+                instructions.append("Length: Detailed and comprehensive with bullet points and full narrative.")
+
+        # Hashtags
+        if include_hashtags is True:
+            instructions.append("Hashtags: Include 3 to 5 highly relevant hashtags at the very end.")
+        elif include_hashtags is False:
+            instructions.append("Hashtags: Do NOT include any hashtags.")
+
+        # Call to Action
+        if include_cta is True:
+            instructions.append("Call to Action: Include a compelling call-to-action (CTA) prompting user interaction or next steps.")
+        elif include_cta is False:
+            instructions.append("Call to Action: Do NOT include a promotional call to action.")
 
         if editorial_context:
             instructions.append(f"Brand Editorial Guidelines:\n{editorial_context.strip()}")
@@ -95,7 +184,6 @@ class AIService:
 
         ideas_list = None
         if parse_ideas and result.content:
-            # Extract lines starting with numbers or bullet points
             raw_lines = [line.strip() for line in result.content.split("\n") if line.strip()]
             extracted = []
             for line in raw_lines:
@@ -117,6 +205,10 @@ class AIService:
             tone=req.tone,
             editorial_context=req.editorial_context,
             action_instruction="Create a new, highly engaging social media publication based on the user's prompt.",
+            language=req.language,
+            length=req.length,
+            include_hashtags=req.include_hashtags,
+            include_cta=req.include_cta,
         )
 
         user_prompt_parts = [f"Topic / Prompt:\n{req.prompt.strip()}"]
@@ -135,6 +227,9 @@ class AIService:
             tone=req.tone,
             editorial_context=req.editorial_context,
             action_instruction="Rewrite the provided text to make it fresh and engaging while preserving its core message.",
+            language=req.language,
+            include_hashtags=req.include_hashtags,
+            include_cta=req.include_cta,
         )
         user_prompt = f"Please rewrite the following content:\n\n{req.content.strip()}"
         result = self.provider.generate(prompt=user_prompt, system_prompt=sys_prompt)
@@ -145,6 +240,9 @@ class AIService:
             platform=req.platform,
             editorial_context=req.editorial_context,
             action_instruction="Enhance clarity, hook, flow, engagement, and vocabulary of the text.",
+            language=req.language,
+            include_hashtags=req.include_hashtags,
+            include_cta=req.include_cta,
         )
         user_prompt = f"Please improve the following publication:\n\n{req.content.strip()}"
         result = self.provider.generate(prompt=user_prompt, system_prompt=sys_prompt)
@@ -155,6 +253,8 @@ class AIService:
             platform=req.platform,
             editorial_context=req.editorial_context,
             action_instruction="Make the text concise and punchy while keeping the key takeaway.",
+            language=req.language,
+            length="short",
         )
         user_prompt = f"Please shorten and condense the following text:\n\n{req.content.strip()}"
         result = self.provider.generate(prompt=user_prompt, system_prompt=sys_prompt)
@@ -165,6 +265,10 @@ class AIService:
             platform=req.platform,
             editorial_context=req.editorial_context,
             action_instruction="Elaborate on the key points, add descriptive detail, structured takeaways or bullet points, and an inviting call-to-action.",
+            language=req.language,
+            length="long",
+            include_hashtags=req.include_hashtags,
+            include_cta=req.include_cta,
         )
         user_prompt = f"Please expand and elaborate on the following text:\n\n{req.content.strip()}"
         result = self.provider.generate(prompt=user_prompt, system_prompt=sys_prompt)
@@ -176,6 +280,7 @@ class AIService:
             tone=req.tone,
             editorial_context=req.editorial_context,
             action_instruction=f"Adapt and transform the voice and phrasing of the text strictly into the {req.tone} tone.",
+            language=req.language,
         )
         user_prompt = f"Please rewrite this text in a {req.tone} tone:\n\n{req.content.strip()}"
         result = self.provider.generate(prompt=user_prompt, system_prompt=sys_prompt)
@@ -187,6 +292,9 @@ class AIService:
             tone=req.tone,
             editorial_context=req.editorial_context,
             action_instruction=f"Format and adapt the publication specifically tailored to the culture, formatting, length, and hashtag conventions of {req.platform}.",
+            language=req.language,
+            include_hashtags=req.include_hashtags,
+            include_cta=req.include_cta,
         )
         user_prompt = f"Please adapt this content for {req.platform}:\n\n{req.content.strip()}"
         result = self.provider.generate(prompt=user_prompt, system_prompt=sys_prompt)
@@ -198,6 +306,7 @@ class AIService:
             tone=req.tone,
             editorial_context=req.editorial_context,
             action_instruction="Generate 4 to 5 unique, creative, and actionable publication ideas with hooks and brief concepts.",
+            language=req.language,
         )
 
         user_prompt_parts = [f"Brainstorm social media content ideas for the following topic:\n{req.topic.strip()}"]
@@ -227,6 +336,7 @@ class AIService:
                 f"The message is a {interaction_type} with {sentiment} sentiment from user {sender_name}. "
                 "Draft a professional, empathetic, and engaging reply ready to send directly to the user."
             ),
+            language="fr",
         )
 
         user_prompt_parts = [

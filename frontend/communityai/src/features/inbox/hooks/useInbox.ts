@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { useAuth } from '../../auth/hooks/useAuth'
+import { getSocialConnectionMode } from '../../social-accounts/services/socialApi'
 import {
   getInboxMessages,
   getInboxUnreadCount,
@@ -25,6 +26,7 @@ export function useInbox() {
     search: '',
   })
   const [selectedMessageId, setSelectedMessageId] = useState<number | null>(null)
+  const [page, setPage] = useState(0)
 
   // Query: messages list
   const {
@@ -34,10 +36,19 @@ export function useInbox() {
     error,
     refetch: refetchMessages,
   } = useQuery({
-    queryKey: ['inbox-messages', filters],
+    queryKey: ['inbox-messages', filters, page],
     queryFn: () => {
       if (!accessToken) throw new Error('Not authenticated')
-      return getInboxMessages(accessToken, filters)
+      return getInboxMessages(accessToken, filters, 50, page * 50)
+    },
+    enabled: !!accessToken,
+  })
+
+  const { data: connectionMode } = useQuery({
+    queryKey: ['social-connection-mode'],
+    queryFn: () => {
+      if (!accessToken) throw new Error('Not authenticated')
+      return getSocialConnectionMode(accessToken)
     },
     enabled: !!accessToken,
   })
@@ -150,6 +161,12 @@ export function useInbox() {
       status: 'ALL',
       search: '',
     })
+    setPage(0)
+  }, [])
+
+  const updateFilters = useCallback((nextFilters: InboxFiltersState) => {
+    setFilters(nextFilters)
+    setPage(0)
   }, [])
 
   const hasActiveFilters = Boolean(
@@ -162,7 +179,7 @@ export function useInbox() {
 
   return {
     filters,
-    setFilters,
+    setFilters: updateFilters,
     hasActiveFilters,
     resetFilters,
     messages,
@@ -191,5 +208,9 @@ export function useInbox() {
     isSuggesting: suggestReplyMutation.isPending,
     isSending: sendReplyMutation.isPending,
     isSeeding: seedMockMutation.isPending,
+    isMockMode: connectionMode?.mock_mode ?? false,
+    page,
+    totalPages: Math.max(1, Math.ceil(total / 50)),
+    setPage,
   }
 }

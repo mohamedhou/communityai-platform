@@ -15,10 +15,10 @@ interface MetricConfig {
 }
 
 const METRICS: MetricConfig[] = [
-  { key: 'reach', label: 'Portée', color: '#6366f1', gradientId: 'reachGrad' },
-  { key: 'impressions', label: 'Impressions', color: '#3b82f6', gradientId: 'impGrad' },
-  { key: 'followers', label: 'Abonnés', color: '#10b981', gradientId: 'follGrad' },
-  { key: 'engagement', label: 'Engagement', color: '#f59e0b', gradientId: 'engGrad' },
+  { key: 'reach', label: 'Portée', color: '#4F46E5', gradientId: 'reachGrad' },
+  { key: 'impressions', label: 'Impressions', color: '#06B6D4', gradientId: 'impGrad' },
+  { key: 'followers', label: 'Abonnés', color: '#16A34A', gradientId: 'follGrad' },
+  { key: 'engagement', label: 'Engagement', color: '#D97706', gradientId: 'engGrad' },
 ]
 
 export function PerformanceChart({ points }: PerformanceChartProps) {
@@ -158,8 +158,8 @@ export function PerformanceChart({ points }: PerformanceChartProps) {
               <stop offset="100%" stopColor="#6366f1" stopOpacity="0.0" />
             </linearGradient>
             <linearGradient id="impGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.35" />
-              <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.0" />
+              <stop offset="0%" stopColor="#6366f1" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="#6366f1" stopOpacity="0.0" />
             </linearGradient>
             <linearGradient id="follGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#10b981" stopOpacity="0.35" />

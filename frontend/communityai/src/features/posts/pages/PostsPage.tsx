@@ -173,11 +173,11 @@ export function PostsPage() {
               onClick={() => setStatusFilter(st)}
               className={`action-btn ${statusFilter === st ? 'btn-refresh' : 'btn-disconnect'}`}
               style={{
-                background: statusFilter === st ? '#2563eb' : '#f3f4f6',
-                color: statusFilter === st ? '#ffffff' : '#374151',
+                background: statusFilter === st ? '#4f46e5' : '#f1f5f9',
+                color: statusFilter === st ? '#ffffff' : '#475569',
                 border: 'none',
                 padding: '6px 12px',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 cursor: 'pointer',
               }}
             >
@@ -267,7 +267,7 @@ export function PostsPage() {
                   )}
 
                   {post.media_url && (
-                    <div style={{ fontSize: '0.85rem', color: '#2563eb' }}>
+                    <div style={{ fontSize: '0.85rem', color: '#4f46e5' }}>
                       Media: <a href={post.media_url} target="_blank" rel="noreferrer">{post.media_url}</a>
                     </div>
                   )}

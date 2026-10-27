@@ -13,6 +13,7 @@ export function AnalyticsPage() {
     filters,
     setFilters,
     accounts,
+    isMockMode,
     summary,
     timeSeries,
     topPosts,
@@ -102,6 +103,7 @@ export function AnalyticsPage() {
         onRefresh={refetchAll}
         onSeedMock={handleSeedMock}
         isSeeding={isSeeding}
+        isMockMode={isMockMode}
       />
 
       {isLoading && !hasData ? (
@@ -110,7 +112,7 @@ export function AnalyticsPage() {
           <p>Chargement des métriques et indicateurs clés...</p>
         </div>
       ) : !hasData ? (
-        <AnalyticsEmptyState onSeedMock={handleSeedMock} isSeeding={isSeeding} />
+        <AnalyticsEmptyState onSeedMock={handleSeedMock} isSeeding={isSeeding} isMockMode={isMockMode} />
       ) : (
         <>
           {/* KPI Cards Grid */}

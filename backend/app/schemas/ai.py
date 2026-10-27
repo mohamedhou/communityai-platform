@@ -23,6 +23,7 @@ class AITone(StrEnum):
     FRIENDLY = "FRIENDLY"
     TECHNICAL = "TECHNICAL"
     PROMOTIONAL = "PROMOTIONAL"
+    HUMOROUS = "HUMOROUS"
 
 
 class AIPlatform(StrEnum):
@@ -38,6 +39,10 @@ class AIGenerateRequest(BaseModel):
     audience: str | None = Field(default=None, max_length=500, description="Target audience")
     objective: str | None = Field(default=None, max_length=500, description="Goal e.g. engagement, conversion")
     editorial_context: str | None = Field(default=None, max_length=1000, description="Brand editorial guidelines")
+    language: str | None = Field(default="fr", description="Target language (e.g. 'fr', 'en')")
+    length: str | None = Field(default=None, description="Desired length ('short', 'medium', 'long')")
+    include_hashtags: bool | None = Field(default=None, description="Include relevant hashtags")
+    include_cta: bool | None = Field(default=None, description="Include a call-to-action")
 
 
 class AIRewriteRequest(BaseModel):
@@ -45,24 +50,34 @@ class AIRewriteRequest(BaseModel):
     tone: AITone | None = Field(default=None, description="Target tone")
     platform: AIPlatform | None = Field(default=None, description="Target platform")
     editorial_context: str | None = Field(default=None, max_length=1000)
+    language: str | None = Field(default=None, description="Target language")
+    include_hashtags: bool | None = Field(default=None)
+    include_cta: bool | None = Field(default=None)
 
 
 class AIImproveRequest(BaseModel):
     content: str = Field(..., min_length=1, max_length=5000, description="Text to improve")
     platform: AIPlatform | None = Field(default=None, description="Target platform")
     editorial_context: str | None = Field(default=None, max_length=1000)
+    language: str | None = Field(default=None)
+    include_hashtags: bool | None = Field(default=None)
+    include_cta: bool | None = Field(default=None)
 
 
 class AIShortenRequest(BaseModel):
     content: str = Field(..., min_length=1, max_length=5000, description="Text to shorten")
     platform: AIPlatform | None = Field(default=None, description="Target platform")
     editorial_context: str | None = Field(default=None, max_length=1000)
+    language: str | None = Field(default=None)
 
 
 class AIExpandRequest(BaseModel):
     content: str = Field(..., min_length=1, max_length=5000, description="Text to expand")
     platform: AIPlatform | None = Field(default=None, description="Target platform")
     editorial_context: str | None = Field(default=None, max_length=1000)
+    language: str | None = Field(default=None)
+    include_hashtags: bool | None = Field(default=None)
+    include_cta: bool | None = Field(default=None)
 
 
 class AIChangeToneRequest(BaseModel):
@@ -70,6 +85,7 @@ class AIChangeToneRequest(BaseModel):
     tone: AITone = Field(..., description="Desired tone")
     platform: AIPlatform | None = Field(default=None, description="Target platform")
     editorial_context: str | None = Field(default=None, max_length=1000)
+    language: str | None = Field(default=None)
 
 
 class AIAdaptPlatformRequest(BaseModel):
@@ -77,6 +93,9 @@ class AIAdaptPlatformRequest(BaseModel):
     platform: AIPlatform = Field(..., description="Target platform: FACEBOOK, INSTAGRAM, LINKEDIN")
     tone: AITone | None = Field(default=None, description="Optional tone")
     editorial_context: str | None = Field(default=None, max_length=1000)
+    language: str | None = Field(default=None)
+    include_hashtags: bool | None = Field(default=None)
+    include_cta: bool | None = Field(default=None)
 
 
 class AIIdeasRequest(BaseModel):
@@ -85,6 +104,7 @@ class AIIdeasRequest(BaseModel):
     tone: AITone | None = Field(default=None, description="Desired tone")
     target_audience: str | None = Field(default=None, max_length=500)
     editorial_context: str | None = Field(default=None, max_length=1000)
+    language: str | None = Field(default="fr")
 
 
 class AIUsage(BaseModel):
@@ -98,3 +118,12 @@ class AIResponse(BaseModel):
     action: AIAction
     usage: AIUsage | None = None
     ideas: list[str] | None = None
+
+
+class AIProviderStatusResponse(BaseModel):
+    provider: str
+    model: str
+    available: bool
+    base_url: str | None = None
+    error: str | None = None
+    installed_models: list[str] = Field(default_factory=list)

@@ -12,6 +12,7 @@ from app.schemas.ai import (
     AIGenerateRequest,
     AIIdeasRequest,
     AIImproveRequest,
+    AIProviderStatusResponse,
     AIResponse,
     AIRewriteRequest,
     AIShortenRequest,
@@ -19,6 +20,15 @@ from app.schemas.ai import (
 from app.services.ai_service import AIService
 
 router = APIRouter(prefix="/api/v1/ai", tags=["ai"])
+
+
+@router.get("/status", response_model=AIProviderStatusResponse)
+def get_ai_status(
+    current_user: User = Depends(get_current_user),
+) -> AIProviderStatusResponse:
+    service = AIService()
+    return service.get_status()
+
 
 
 @router.post("/generate", response_model=AIResponse)

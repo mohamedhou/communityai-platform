@@ -7,6 +7,7 @@ interface AIResultProps {
   onCopy: (text?: string) => void
   onUseInPostEditor: (text?: string) => void
   onRegenerate: () => void
+  onContentChange?: (newContent: string) => void
 }
 
 export function AIResult({
@@ -16,13 +17,14 @@ export function AIResult({
   onCopy,
   onUseInPostEditor,
   onRegenerate,
+  onContentChange,
 }: AIResultProps) {
   if (isLoading) {
     return (
       <div className="ai-result-card loading-state">
         <div className="ai-spinner" />
-        <h4>Crafting your publication with AI...</h4>
-        <p className="ai-subtext">Applying platform constraints, tone nuances, and editorial rules.</p>
+        <h4>Génération de votre publication en cours...</h4>
+        <p className="ai-subtext">Application du ton, du réseau social et des règles éditoriales avec Ollama.</p>
       </div>
     )
   }
@@ -31,9 +33,9 @@ export function AIResult({
     return (
       <div className="ai-result-card empty-state">
         <div className="ai-empty-icon">✨</div>
-        <h4>Your AI-generated content will appear here</h4>
+        <h4>Votre contenu généré apparaîtra ici</h4>
         <p className="ai-subtext">
-          Select an action above, configure your options, and click Generate to get started.
+          Choisissez une action, configurez vos options et cliquez sur Générer pour commencer.
         </p>
       </div>
     )
@@ -48,7 +50,7 @@ export function AIResult({
         <div className="ai-result-badges">
           <span className="ai-badge-action">{result.action}</span>
           <span className="ai-badge-stats">
-            {charCount} chars • {wordCount} words
+            {charCount} caractères • {wordCount} mots
           </span>
           {result.usage?.total_tokens && (
             <span className="ai-badge-tokens">{result.usage.total_tokens} tokens</span>
@@ -60,24 +62,24 @@ export function AIResult({
             type="button"
             onClick={onRegenerate}
             className="ai-btn-secondary"
-            title="Generate another version"
+            title="Générer une autre version"
           >
-            🔄 Regenerate
+            🔄 Régénérer
           </button>
           <button
             type="button"
             onClick={() => onCopy()}
             className={`ai-btn-secondary ${copied ? 'btn-copied' : ''}`}
           >
-            {copied ? '✓ Copied!' : '📋 Copy'}
+            {copied ? '✓ Copié !' : '📋 Copier'}
           </button>
         </div>
       </div>
 
-      {/* Ideas list display or single content */}
+      {/* Ideas list display or editable content */}
       {result.ideas && result.ideas.length > 0 ? (
         <div className="ai-ideas-list">
-          <h4 className="ai-ideas-title">💡 Generated Publication Ideas:</h4>
+          <h4 className="ai-ideas-title">💡 Idées de publications générées :</h4>
           {result.ideas.map((idea, idx) => (
             <div key={idx} className="ai-idea-item">
               <div className="ai-idea-text">{idea}</div>
@@ -86,17 +88,17 @@ export function AIResult({
                   type="button"
                   onClick={() => onCopy(idea)}
                   className="ai-idea-btn"
-                  title="Copy this idea"
+                  title="Copier cette idée"
                 >
-                  📋 Copy
+                  📋 Copier
                 </button>
                 <button
                   type="button"
                   onClick={() => onUseInPostEditor(idea)}
                   className="ai-idea-btn btn-primary-idea"
-                  title="Open this idea in Post Editor"
+                  title="Utiliser cette idée pour rédiger un post"
                 >
-                  🚀 Use in Editor
+                  🚀 Utiliser
                 </button>
               </div>
             </div>
@@ -104,14 +106,23 @@ export function AIResult({
         </div>
       ) : (
         <div className="ai-result-content">
-          <pre className="ai-content-pre">{result.content}</pre>
+          <div style={{ marginBottom: '6px', fontSize: '0.85rem', color: '#64748b' }}>
+            ✏️ Vous pouvez modifier directement le texte généré ci-dessous avant de l'enregistrer :
+          </div>
+          <textarea
+            className="ai-textarea-input"
+            rows={8}
+            value={result.content}
+            onChange={(e) => onContentChange?.(e.target.value)}
+            style={{ width: '100%', fontFamily: 'inherit', fontSize: '0.95rem', lineHeight: '1.6' }}
+          />
         </div>
       )}
 
       {/* Main Bottom Action Bar */}
       <div className="ai-result-footer">
         <div className="ai-human-in-the-loop-note">
-          <span>🛡️ Human in the loop: Review or edit your copy before scheduling.</span>
+          <span>🛡️ Contrôle humain : Vérifiez ou ajustez le texte avant publication.</span>
         </div>
 
         <button
@@ -119,7 +130,7 @@ export function AIResult({
           onClick={() => onUseInPostEditor()}
           className="ai-btn-primary-action"
         >
-          🚀 Use in Post Editor
+          💾 Enregistrer en brouillon (Éditeur)
         </button>
       </div>
     </div>

@@ -58,16 +58,22 @@ services:
       LINKEDIN_CLIENT_SECRET: ${LINKEDIN_CLIENT_SECRET:-}
       LINKEDIN_REDIRECT_URI: ${LINKEDIN_REDIRECT_URI:-http://localhost:8000/api/v1/social-accounts/linkedin/callback}
       FRONTEND_APP_URL: ${FRONTEND_APP_URL:-http://localhost:5173}
-      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      AI_PROVIDER: ${AI_PROVIDER:-ollama}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:3b}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash}
       MEDIA_ROOT: ${MEDIA_ROOT:-/app/media}
       MEDIA_MAX_UPLOAD_BYTES: ${MEDIA_MAX_UPLOAD_BYTES:-104857600}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8000:8000"
     volumes:
+      - ./backend/app:/app/app
+      - ./backend/tests:/app/tests
       - media_data:/app/media
     depends_on:
       postgres:
@@ -84,6 +90,8 @@ services:
       VITE_API_URL: http://localhost:8000
     ports:
       - "5173:5173"
+    volumes:
+      - ./frontend/communityai/dist:/app/dist
     depends_on:
       - backend
 

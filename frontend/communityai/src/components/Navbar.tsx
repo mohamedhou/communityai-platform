@@ -58,6 +58,15 @@ export function Navbar() {
           </NavLink>
 
           <NavLink
+            to="/media"
+            className={({ isActive }) =>
+              `navbar-link ${isActive ? 'active' : ''}`
+            }
+          >
+            Media Library
+          </NavLink>
+
+          <NavLink
             to="/calendar"
             className={({ isActive }) =>
               `navbar-link ${isActive ? 'active' : ''}`
