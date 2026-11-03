@@ -16,6 +16,9 @@ from app.api.routes.settings import router as settings_router
 from app.api.routes.reporting import router as reporting_router
 from app.api.routes.workspace import router as workspace_router
 from app.api.routes.media import router as media_router
+from app.api.routes.business_knowledge import router as business_knowledge_router
+from app.api.routes.ai_community_manager import router as ai_cm_router
+from app.api.routes.webhooks import router as webhooks_router
 
 api_router = APIRouter()
 api_router.include_router(root_router)
@@ -32,3 +35,6 @@ api_router.include_router(settings_router)
 api_router.include_router(reporting_router)
 api_router.include_router(workspace_router)
 api_router.include_router(media_router)
+api_router.include_router(business_knowledge_router)
+api_router.include_router(ai_cm_router)
+api_router.include_router(webhooks_router)

@@ -71,6 +71,31 @@ export function InboxItem({ message, isSelected, onSelect }: InboxItemProps) {
           {platform.toUpperCase()}
         </span>
         <SentimentBadge sentiment={message.sentiment} score={message.sentiment_score} />
+        {message.intent && (
+          <span className="aicm-tag intent-tag" title={`Intention: ${message.intent}`}>
+            {message.intent === 'complaint'
+              ? '⚠️ Réclamation'
+              : message.intent === 'compliment'
+              ? '⭐ Compliment'
+              : message.intent === 'question'
+              ? '❓ Question'
+              : message.intent === 'price_inquiry'
+              ? '💶 Tarifs'
+              : message.intent === 'delivery_inquiry'
+              ? '📦 Livraison'
+              : message.intent}
+          </span>
+        )}
+        {(message.urgency === 'high' || message.urgency === 'critical') && (
+          <span className={`aicm-tag urgency-tag ${message.urgency}`}>
+            {message.urgency === 'critical' ? '🚨 Critique' : '🔥 Urgent'}
+          </span>
+        )}
+        {message.is_escalated && (
+          <span className="aicm-tag tag-escalated" title="Escaladé à un responsable">
+            👤 Escaladé
+          </span>
+        )}
         {message.is_resolved && (
           <span className="status-tag status-resolved">Traité</span>
         )}

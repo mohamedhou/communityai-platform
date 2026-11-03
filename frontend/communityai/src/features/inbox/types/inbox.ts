@@ -28,6 +28,16 @@ export interface InboxMessage {
   created_at: string
   updated_at: string
   social_account?: SocialAccountSummary | null
+  intent?: string | null
+  urgency?: string | null
+  topic?: string | null
+  language?: string | null
+  ai_analysis?: Record<string, any> | null
+  assigned_to_user_id?: number | null
+  is_escalated?: boolean
+  escalated_to_user_id?: number | null
+  escalation_note?: string | null
+  escalated_at?: string | null
 }
 
 export interface InboxListResponse {
@@ -46,6 +56,9 @@ export interface InboxFiltersState {
   sentiment?: InboxSentiment | 'ALL'
   status?: 'ALL' | 'UNREAD' | 'READ' | 'RESOLVED'
   search?: string
+  intent?: string
+  urgency?: string
+  is_escalated?: boolean
 }
 
 export interface InboxReplyRequest {

@@ -16,6 +16,8 @@ os.environ.setdefault(
     "SOCIAL_TOKEN_ENCRYPTION_KEY",
     "G3cZ84fJd9X2-vK8pQLt8G3cZ84fJd9X2-vK8pQLt8E=",
 )
+os.environ["AI_PROVIDER"] = "mock"
+os.environ["SOCIAL_MOCK_MODE"] = "true"
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:

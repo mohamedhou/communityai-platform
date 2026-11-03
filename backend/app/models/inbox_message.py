@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, JSON, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -60,6 +60,30 @@ class InboxMessage(Base):
         nullable=False,
     )
 
+    # AI Community Manager fields
+    intent: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    urgency: Mapped[str | None] = mapped_column(String(50), nullable=True, default="normal", index=True)
+    topic: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    language: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    ai_analysis: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+    # Team assignment and escalation
+    assigned_to_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    is_escalated: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    escalated_to_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    escalation_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    escalated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     workspace = relationship("Workspace")
-    user = relationship("User")
+    user = relationship("User", foreign_keys=[user_id])
     social_account = relationship("SocialAccount")
+    assigned_to_user = relationship("User", foreign_keys=[assigned_to_user_id])
+    escalated_to_user = relationship("User", foreign_keys=[escalated_to_user_id])

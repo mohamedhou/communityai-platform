@@ -38,6 +38,15 @@ export async function getInboxMessages(
   if (filters?.search && filters.search.trim()) {
     params.append('search', filters.search.trim())
   }
+  if (filters?.intent && filters.intent !== 'ALL') {
+    params.append('intent', filters.intent)
+  }
+  if (filters?.urgency && filters.urgency !== 'ALL') {
+    params.append('urgency', filters.urgency)
+  }
+  if (filters?.is_escalated !== undefined) {
+    params.append('is_escalated', filters.is_escalated.toString())
+  }
 
   const res = await fetch(`${API_BASE}?${params.toString()}`, {
     headers: {

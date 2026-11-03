@@ -20,6 +20,7 @@ import { ReviewQueuePage } from './features/posts/pages/ReviewQueuePage'
 import { EditorialCalendarPage } from './features/calendar/pages/EditorialCalendarPage'
 import { AIAssistantPage } from './features/ai/pages/AIAssistantPage'
 import { InboxPage } from './features/inbox/pages/InboxPage'
+import { AICMHubPage } from './features/ai-cm/pages/AICMHubPage'
 import { AnalyticsPage } from './features/analytics/pages/AnalyticsPage'
 import { NotificationsPage } from './features/notifications/pages/NotificationsPage'
 import { SettingsPage } from './features/settings/pages/SettingsPage'
@@ -154,6 +155,12 @@ function App() {
         <Route
           path="/inbox"
           element={<InboxPage />}
+        />
+
+        {/* AI Community Manager */}
+        <Route
+          path="/ai-community-manager"
+          element={<AICMHubPage />}
         />
 
         {/* Analytics & Reporting */}

@@ -155,6 +155,58 @@ export function InboxFilters({ filters, onChange, unreadCount = 0 }: InboxFilter
           </div>
         </div>
 
+        {/* Intent Filter */}
+        <div className="filter-group">
+          <span className="filter-label">Intention :</span>
+          <div className="filter-pills">
+            {[
+              { id: 'ALL', label: 'Toutes' },
+              { id: 'question', label: '❓ Questions' },
+              { id: 'complaint', label: '⚠️ Réclamations' },
+              { id: 'compliment', label: '⭐ Compliments' },
+              { id: 'price_inquiry', label: '💶 Tarifs' },
+              { id: 'delivery_inquiry', label: '📦 Livraison' },
+            ].map((it) => (
+              <button
+                key={it.id}
+                type="button"
+                className={`pill-btn ${(filters.intent || 'ALL') === it.id ? 'active' : ''}`}
+                onClick={() => onChange({ ...filters, intent: it.id === 'ALL' ? undefined : it.id })}
+              >
+                {it.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Urgency & Escalation Filter */}
+        <div className="filter-group">
+          <span className="filter-label">Priorité :</span>
+          <div className="filter-pills">
+            <button
+              type="button"
+              className={`pill-btn ${!filters.urgency && !filters.is_escalated ? 'active' : ''}`}
+              onClick={() => onChange({ ...filters, urgency: undefined, is_escalated: undefined })}
+            >
+              Toutes
+            </button>
+            <button
+              type="button"
+              className={`pill-btn ${filters.urgency === 'high' ? 'active pill-negative' : ''}`}
+              onClick={() => onChange({ ...filters, urgency: 'high', is_escalated: undefined })}
+            >
+              🔥 Urgentes
+            </button>
+            <button
+              type="button"
+              className={`pill-btn ${filters.is_escalated ? 'active pill-negative' : ''}`}
+              onClick={() => onChange({ ...filters, is_escalated: true, urgency: undefined })}
+            >
+              👤 Escaladées
+            </button>
+          </div>
+        </div>
+
         {/* Status Filter */}
         <div className="filter-group">
           <span className="filter-label">Statut :</span>

@@ -21,8 +21,40 @@ class OllamaProvider(AIProvider):
         timeout: float = 60.0,
     ):
         settings = get_settings()
-        self.base_url = (base_url or settings.ollama_base_url or "http://host.docker.internal:11434").rstrip("/")
-        self.model = model or settings.ollama_model or "llama3.2:3b"
+        raw_url = (base_url or settings.ollama_base_url or "http://host.docker.internal:11434").rstrip("/")
+        if "host.docker.internal" in raw_url:
+            try:
+                with httpx.Client(timeout=0.4) as probe:
+                    probe.get(f"{raw_url}/api/tags")
+            except Exception:
+                raw_url = raw_url.replace("host.docker.internal", "127.0.0.1")
+        self.base_url = raw_url
+
+        configured_model = model or settings.ollama_model or "llama3.2:3b"
+        if model is None:
+            try:
+                with httpx.Client(timeout=0.5) as client:
+                    res = client.get(f"{self.base_url}/api/tags")
+                    if res.status_code == 200:
+                        installed = [m.get("name", "") for m in res.json().get("models", []) if m.get("name")]
+                        model_base = configured_model.split(":")[0]
+                        has_model = any(
+                            name == configured_model
+                            or name.startswith(f"{configured_model}:")
+                            or name.split(":")[0] == model_base
+                            for name in installed
+                        )
+                        if not has_model and installed:
+                            logger.info(
+                                "Ollama model '%s' not present; using installed model '%s'",
+                                configured_model,
+                                installed[0],
+                            )
+                            configured_model = installed[0]
+            except Exception:
+                pass
+
+        self.model = configured_model
         self.timeout = timeout
 
     def check_availability(self) -> dict[str, Any]:
@@ -126,13 +158,12 @@ class OllamaProvider(AIProvider):
             "stream": False,
         }
 
-        options: dict[str, Any] = {}
+        options: dict[str, Any] = {
+            "num_predict": max_tokens if max_tokens is not None else 350,
+        }
         if temperature is not None:
             options["temperature"] = temperature
-        if max_tokens is not None:
-            options["num_predict"] = max_tokens
-        if options:
-            payload["options"] = options
+        payload["options"] = options
 
         try:
             with httpx.Client(timeout=self.timeout) as client:

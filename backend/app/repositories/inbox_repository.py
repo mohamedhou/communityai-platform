@@ -35,6 +35,9 @@ class InboxRepository:
         type: InboxMessageType | None = None,
         platform: str | None = None,
         sentiment: InboxSentiment | None = None,
+        intent: str | None = None,
+        urgency: str | None = None,
+        is_escalated: bool | None = None,
         is_read: bool | None = None,
         is_resolved: bool | None = None,
         search: str | None = None,
@@ -61,6 +64,15 @@ class InboxRepository:
 
         if sentiment:
             base_query = base_query.where(InboxMessage.sentiment == sentiment)
+
+        if intent:
+            base_query = base_query.where(InboxMessage.intent == intent)
+
+        if urgency:
+            base_query = base_query.where(InboxMessage.urgency == urgency)
+
+        if is_escalated is not None:
+            base_query = base_query.where(InboxMessage.is_escalated == is_escalated)
 
         if is_read is not None:
             base_query = base_query.where(InboxMessage.is_read == is_read)
@@ -127,6 +139,12 @@ class InboxRepository:
             sentiment_score=message_in.sentiment_score,
             is_read=message_in.is_read,
             is_resolved=message_in.is_resolved,
+            intent=message_in.intent,
+            urgency=message_in.urgency or "normal",
+            topic=message_in.topic,
+            language=message_in.language or "fr",
+            ai_analysis=message_in.ai_analysis,
+            is_escalated=message_in.is_escalated,
         )
         db.add(db_obj)
         db.commit()
@@ -160,6 +178,23 @@ class InboxRepository:
                 sentiment_score=-0.85,
                 is_read=False,
                 is_resolved=False,
+                intent="complaint",
+                urgency="high",
+                topic="Export de données & Bug",
+                language="fr",
+                is_escalated=True,
+                ai_analysis={
+                    "sentiment": "negative",
+                    "intent": "complaint",
+                    "language": "fr",
+                    "urgency": "high",
+                    "topic": "Export de données & Bug",
+                    "requires_human": True,
+                    "reason": "Le client signale un dysfonctionnement critique sur l'export de ses données.",
+                    "customer_need": "Rétablissement immédiat de la fonctionnalité d'export",
+                    "potential_risk": "Insatisfaction client et risque de résiliation",
+                    "confidence": 0.95,
+                },
             ),
             InboxMessageCreate(
                 user_id=user_id,
@@ -173,6 +208,23 @@ class InboxRepository:
                 sentiment_score=0.92,
                 is_read=False,
                 is_resolved=False,
+                intent="compliment",
+                urgency="low",
+                topic="Satisfaction & Félicitations",
+                language="fr",
+                is_escalated=False,
+                ai_analysis={
+                    "sentiment": "positive",
+                    "intent": "compliment",
+                    "language": "fr",
+                    "urgency": "low",
+                    "topic": "Satisfaction & Félicitations",
+                    "requires_human": False,
+                    "reason": "Message de remerciement et valorisation de l'outil.",
+                    "customer_need": "Remerciement",
+                    "potential_risk": None,
+                    "confidence": 0.96,
+                },
             ),
             InboxMessageCreate(
                 user_id=user_id,
@@ -186,6 +238,23 @@ class InboxRepository:
                 sentiment_score=0.05,
                 is_read=True,
                 is_resolved=False,
+                intent="question",
+                urgency="normal",
+                topic="Intégrations futures",
+                language="fr",
+                is_escalated=False,
+                ai_analysis={
+                    "sentiment": "neutral",
+                    "intent": "question",
+                    "language": "fr",
+                    "urgency": "normal",
+                    "topic": "Intégrations futures",
+                    "requires_human": False,
+                    "reason": "Demande de feuille de route pour de nouvelles intégrations.",
+                    "customer_need": "Information roadmap",
+                    "potential_risk": None,
+                    "confidence": 0.91,
+                },
             ),
             InboxMessageCreate(
                 user_id=user_id,
@@ -199,6 +268,23 @@ class InboxRepository:
                 sentiment_score=0.12,
                 is_read=False,
                 is_resolved=False,
+                intent="price_inquiry",
+                urgency="normal",
+                topic="Tarifs & Offre Entreprise",
+                language="fr",
+                is_escalated=False,
+                ai_analysis={
+                    "sentiment": "neutral",
+                    "intent": "price_inquiry",
+                    "language": "fr",
+                    "urgency": "normal",
+                    "topic": "Tarifs & Offre Entreprise",
+                    "requires_human": False,
+                    "reason": "Prospect intéressé par les offres payantes.",
+                    "customer_need": "Grille tarifaire et conditions Entreprise",
+                    "potential_risk": None,
+                    "confidence": 0.93,
+                },
             ),
             InboxMessageCreate(
                 user_id=user_id,
@@ -212,6 +298,23 @@ class InboxRepository:
                 sentiment_score=0.88,
                 is_read=False,
                 is_resolved=False,
+                intent="compliment",
+                urgency="low",
+                topic="Revue de presse & Mention",
+                language="fr",
+                is_escalated=False,
+                ai_analysis={
+                    "sentiment": "positive",
+                    "intent": "compliment",
+                    "language": "fr",
+                    "urgency": "low",
+                    "topic": "Revue de presse & Mention",
+                    "requires_human": False,
+                    "reason": "Mention média très positive valorisant la marque.",
+                    "customer_need": "Partage de visibilité",
+                    "potential_risk": None,
+                    "confidence": 0.98,
+                },
             ),
         ]
 

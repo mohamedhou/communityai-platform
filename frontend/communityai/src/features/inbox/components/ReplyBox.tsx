@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface ReplyBoxProps {
   onSuggestReply: (tone: string, instructions?: string) => Promise<string | undefined>
@@ -6,6 +6,7 @@ interface ReplyBoxProps {
   isSuggesting: boolean
   isSending: boolean
   isResolved: boolean
+  initialContent?: string | null
 }
 
 export function ReplyBox({
@@ -14,6 +15,7 @@ export function ReplyBox({
   isSuggesting,
   isSending,
   isResolved,
+  initialContent,
 }: ReplyBoxProps) {
   const [content, setContent] = useState('')
   const [selectedTone, setSelectedTone] = useState('PROFESSIONAL')
@@ -21,6 +23,13 @@ export function ReplyBox({
   const [showOptions, setShowOptions] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (initialContent) {
+      setContent(initialContent)
+      setSuccess('Brouillon IA chargé dans l’éditeur. Vous pouvez le modifier.')
+    }
+  }, [initialContent])
 
   const handleSuggest = async () => {
     try {

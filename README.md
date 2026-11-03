@@ -18,6 +18,7 @@ CommunityAI is an AI-assisted community management platform for planning, publis
 - Drafts, scheduling, publishing, cancellation, and editorial calendar workflows.
 - AI generation, rewriting, improvement, shortening, expansion, tone changes, platform adaptation, and ideas.
 - Unified inbox with search, filters, read/resolved state, AI suggestions, and manual replies.
+- **AI Community Manager**: Per-workspace Business Knowledge Base (Identity, Products, Policies, Editorial Tone), automated message classification (sentiment, intent, urgency, anti-injection defense), dynamic grounded context retrieval, 3 automation modes (Manual, Approval Required, Automatic with strict safety blocklist for complaints/refunds/threats), team escalation and assignment, Meta webhook signature verification, and social reply dispatch. See [docs/ai-community-manager-guide.md](docs/ai-community-manager-guide.md).
 - Analytics KPIs, timeseries, top posts, mock seed data, CSV/PDF reporting, and notifications.
 
 
@@ -76,7 +77,7 @@ docker compose up -d --build
 docker compose ps
 ```
 
-The backend startup command runs `python -m alembic upgrade head` before Uvicorn. A fresh database therefore does not require a separate manual migration step. The expected migration head is `0008_create_user_settings`.
+The backend startup command runs `python -m alembic upgrade head` before Uvicorn. A fresh database therefore does not require a separate manual migration step. The expected migration head is `0013_create_ai_community_manager`.
 
 Stop the stack with:
 

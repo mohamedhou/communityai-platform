@@ -59,6 +59,7 @@ class Settings(BaseSettings):
     meta_client_secret: str | None = Field(default=None, alias="META_CLIENT_SECRET")
     meta_redirect_uri: str | None = Field(default=None, alias="META_REDIRECT_URI")
     meta_graph_api_version: str = Field(default="v24.0", alias="META_GRAPH_API_VERSION")
+    meta_webhook_verify_token: str | None = Field(default=None, alias="META_WEBHOOK_VERIFY_TOKEN")
 
     linkedin_client_id: str | None = Field(default=None, alias="LINKEDIN_CLIENT_ID")
     linkedin_client_secret: str | None = Field(default=None, alias="LINKEDIN_CLIENT_SECRET")

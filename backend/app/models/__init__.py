@@ -14,6 +14,14 @@ from app.models.workspace import (
     WorkspaceMember,
     WorkspaceRole,
 )
+from app.models.business_knowledge import BusinessKnowledge, KnowledgeProduct, KnowledgeFAQ
+from app.models.ai_community_manager import (
+    AICMSettings,
+    AICMMode,
+    AIReplyDraft,
+    AIReplyDraftStatus,
+    AICMAuditLog,
+)
 from app.social.models import SocialAccount, SocialAccountStatus, OAuthState
 
 __all__ = [
@@ -41,5 +49,13 @@ __all__ = [
     "WorkspaceActivity",
     "WorkspaceRole",
     "MembershipStatus",
+    "BusinessKnowledge",
+    "KnowledgeProduct",
+    "KnowledgeFAQ",
+    "AICMSettings",
+    "AICMMode",
+    "AIReplyDraft",
+    "AIReplyDraftStatus",
+    "AICMAuditLog",
 ]
 

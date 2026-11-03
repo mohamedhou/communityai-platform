@@ -36,6 +36,19 @@ class InboxMessageResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     social_account: SocialAccountSummary | None = None
+    # AI Community Manager fields
+    intent: str | None = None
+    urgency: str | None = None
+    topic: str | None = None
+    language: str | None = None
+    ai_analysis: dict | None = None
+
+    # Team assignment and escalation
+    assigned_to_user_id: int | None = None
+    is_escalated: bool = False
+    escalated_to_user_id: int | None = None
+    escalation_note: str | None = None
+    escalated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -79,3 +92,9 @@ class InboxMessageCreate(BaseModel):
     sentiment_score: float | None = None
     is_read: bool = False
     is_resolved: bool = False
+    intent: str | None = None
+    urgency: str | None = "normal"
+    topic: str | None = None
+    language: str | None = "fr"
+    ai_analysis: dict | None = None
+    is_escalated: bool = False

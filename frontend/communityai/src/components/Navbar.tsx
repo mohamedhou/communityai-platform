@@ -94,6 +94,16 @@ export function Navbar() {
           </NavLink>
 
           <NavLink
+            to="/ai-community-manager"
+            className={({ isActive }) =>
+              `navbar-link ${isActive ? 'active' : ''}`
+            }
+            title="AI Community Manager"
+          >
+            🤖 AI CM
+          </NavLink>
+
+          <NavLink
             to="/analytics"
             className={({ isActive }) =>
               `navbar-link ${isActive ? 'active' : ''}`
