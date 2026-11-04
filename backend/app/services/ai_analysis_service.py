@@ -97,6 +97,15 @@ class AIAnalysisService:
         settings = get_settings()
         provider_name = (settings.ai_provider or "mock").lower().strip()
 
+        # Security guardrails: check for injection keywords
+        injection_keywords = [
+            "ignore previous", "ignore all", "ignore les", "ignore tes", "ignore toutes",
+            "ignore instructions", "oublie", "oublie tes", "oublie toutes", "system prompt",
+            "tu es maintenant", "dan mode", "jailbreak", "nouvelles instructions",
+            "instructions système", "bypass", "prompt injection",
+        ]
+        is_injection_detected = any(k in content.lower() for k in injection_keywords)
+
         # Execute generation with retry
         max_attempts = 2
         last_error = None
@@ -114,6 +123,11 @@ class AIAnalysisService:
 
                 # Validate with Pydantic
                 result = AIAnalysisResult.model_validate(data)
+                if is_injection_detected:
+                    result.requires_human = True
+                    result.urgency = UrgencyLevel.CRITICAL
+                    result.potential_risk = "Tentative de contournement de prompt"
+                    result.intent = IntentType.SPAM
                 return result
 
             except (json.JSONDecodeError, Exception) as exc:
@@ -138,7 +152,12 @@ class AIAnalysisService:
         lowered = content.lower()
 
         # Detect prompt injection attempts
-        injection_keywords = ["ignore previous", "oublie", "system prompt", "tu es maintenant", "dan mode", "jailbreak"]
+        injection_keywords = [
+            "ignore previous", "ignore all", "ignore les", "ignore tes", "ignore toutes",
+            "ignore instructions", "oublie", "oublie tes", "oublie toutes", "system prompt",
+            "tu es maintenant", "dan mode", "jailbreak", "nouvelles instructions",
+            "instructions système", "bypass", "prompt injection",
+        ]
         is_injection = any(k in lowered for k in injection_keywords)
 
         # Detect complaints and high urgency

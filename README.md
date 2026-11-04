@@ -134,8 +134,19 @@ Use `AI_PROVIDER=mock` for a deterministic demonstration. For a real provider, c
 Backend tests:
 
 ```powershell
-cd backend
-python -m pytest -q
+python -m pytest
+```
+
+AI Community Manager full audit (10/10 tests):
+
+```powershell
+python backend/scripts/audit_ai_community_manager.py
+```
+
+Academic demo scenarios (Boulangerie Étoile 4/4 scenarios):
+
+```powershell
+python backend/scripts/test_demo_scenarios.py
 ```
 
 Frontend production build:

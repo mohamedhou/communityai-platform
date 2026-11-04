@@ -42,8 +42,9 @@ class AIContextBundle:
         """
         Formats the context into clean, structured markdown for LLM injection.
         Guarantees that user content is clearly demarcated and cannot override system prompts.
+        All business knowledge data is treated as inert, untrusted reference material.
         """
-        lines = []
+        lines = ["<KNOWLEDGE_BASE_DATA>"]
 
         # 1. Company Profile
         cp = self.company_profile

@@ -25,7 +25,7 @@ target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    url = settings.database_url
+    url = config.get_main_option("sqlalchemy.url") or settings.database_url
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -39,7 +39,7 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     configuration = config.get_section(config.config_ini_section, {})
-    configuration["sqlalchemy.url"] = settings.database_url
+    configuration["sqlalchemy.url"] = config.get_main_option("sqlalchemy.url") or settings.database_url
 
     connectable = engine_from_config(
         configuration,
@@ -48,7 +48,11 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            render_as_batch=(connection.dialect.name == "sqlite"),
+        )
 
         with context.begin_transaction():
             context.run_migrations()
