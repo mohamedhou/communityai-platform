@@ -5257,24 +5257,13 @@ body {
 }
 
 /* --------------------------------------------------------------------------
-   Buttons Harmonization
+   Buttons Harmonization (Accessible, High-Contrast Design System)
    -------------------------------------------------------------------------- */
-.btn,
-.btn-primary,
-.connect-btn,
-.settings-save-button,
-.settings-link-button,
-.ai-generate-submit-btn,
-.ai-btn-primary-action,
-.calendar-new-post-btn,
-.notifications-mark-all,
-.report-preview-button {
+.btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: var(--ca-primary);
-  color: #ffffff !important;
   font-weight: 600;
   font-size: 0.9rem;
   padding: 9px 18px;
@@ -5283,11 +5272,29 @@ body {
   cursor: pointer;
   text-decoration: none;
   transition: all 0.15s ease-in-out;
+  box-sizing: border-box;
+  line-height: 1.4;
+}
+
+/* Primary Button: CommunityAI Purple Background + White Text */
+.btn-primary,
+.btn:not(.btn-secondary):not(.btn-outline):not(.btn-action):not(.btn-danger):not(.btn-success):not(.btn-link):not(.btn-close):not(.btn-ghost):not(.banner-close-btn),
+.connect-btn,
+.settings-save-button,
+.settings-link-button,
+.ai-generate-submit-btn,
+.ai-btn-primary-action,
+.calendar-new-post-btn,
+.notifications-mark-all,
+.report-preview-button {
+  background: var(--ca-primary) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
   box-shadow: 0 1px 3px rgba(79, 70, 229, 0.2);
 }
 
-.btn:hover:not(:disabled),
 .btn-primary:hover:not(:disabled),
+.btn:not(.btn-secondary):not(.btn-outline):not(.btn-action):not(.btn-danger):not(.btn-success):not(.btn-link):not(.btn-close):not(.btn-ghost):not(.banner-close-btn):hover:not(:disabled),
 .connect-btn:hover:not(:disabled),
 .settings-save-button:hover:not(:disabled),
 .settings-link-button:hover:not(:disabled),
@@ -5296,81 +5303,232 @@ body {
 .calendar-new-post-btn:hover:not(:disabled),
 .notifications-mark-all:hover:not(:disabled),
 .report-preview-button:hover:not(:disabled) {
-  background: var(--ca-primary-hover);
+  background: var(--ca-primary-hover) !important;
+  color: #ffffff !important;
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
   transform: translateY(-1px);
 }
 
-.btn:disabled,
-.btn-primary:disabled,
-.settings-save-button:disabled,
-.ai-generate-submit-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
+/* Secondary Button: Clean Light Background + Dark Text + Clear Visible Border */
 .btn-secondary,
-.btn-outline,
-.btn-action,
 .ai-btn-secondary,
 .calendar-nav-btn,
-.calendar-today-btn,
-.calendar-toggle-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  background: var(--ca-surface);
-  border: 1px solid var(--ca-border);
-  color: var(--ca-text);
-  font-weight: 500;
-  font-size: 0.9rem;
-  padding: 8px 16px;
-  border-radius: var(--ca-radius-sm);
-  cursor: pointer;
-  text-decoration: none;
-  transition: all 0.15s ease-in-out;
+.calendar-today-btn {
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  font-weight: 600 !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
 }
 
 .btn-secondary:hover:not(:disabled),
-.btn-outline:hover:not(:disabled),
-.btn-action:hover:not(:disabled),
 .ai-btn-secondary:hover:not(:disabled),
 .calendar-nav-btn:hover:not(:disabled),
 .calendar-today-btn:hover:not(:disabled) {
-  background: var(--ca-primary-light);
-  border-color: #c7d2fe;
-  color: var(--ca-primary-hover);
+  background: #eef2ff !important;
+  border-color: #818cf8 !important;
+  color: #3730a3 !important;
+  transform: translateY(-1px);
 }
 
-.btn-action.active,
-.calendar-toggle-btn.active {
-  background: var(--ca-primary);
-  color: #ffffff;
-  border-color: var(--ca-primary);
+/* Outline Button: Pure White Background + Purple Border + Purple Text */
+.btn-outline {
+  background: #ffffff !important;
+  border: 1.5px solid var(--ca-primary) !important;
+  color: var(--ca-primary) !important;
+  font-weight: 600 !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
+.btn-outline:hover:not(:disabled) {
+  background: var(--ca-primary-light) !important;
+  border-color: var(--ca-primary-hover) !important;
+  color: var(--ca-primary-hover) !important;
+  transform: translateY(-1px);
+}
+
+/* Success Button */
+.btn-success {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  border: 1px solid transparent !important;
+  font-weight: 600 !important;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: #059669 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
+
+/* Danger Button */
 .btn-danger,
 .btn-deactivate {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  background: #dc2626;
-  color: #ffffff;
-  font-weight: 600;
-  font-size: 0.88rem;
-  padding: 8px 16px;
-  border: 1px solid transparent;
-  border-radius: var(--ca-radius-sm);
-  cursor: pointer;
-  transition: all 0.15s ease-in-out;
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border: 1px solid transparent !important;
+  font-weight: 600 !important;
 }
 
 .btn-danger:hover:not(:disabled),
 .btn-deactivate:hover:not(:disabled) {
-  background: #b91c1c;
+  background: #b91c1c !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
+
+/* Action Buttons (Inbox & Calendar) */
+.btn-action,
+.calendar-toggle-btn {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #1e293b !important;
+  font-weight: 500 !important;
+}
+
+.btn-action:hover:not(:disabled),
+.calendar-toggle-btn:hover:not(:disabled) {
+  background: var(--ca-primary-light) !important;
+  border-color: #818cf8 !important;
+  color: var(--ca-primary-hover) !important;
+}
+
+.btn-action.active,
+.btn-action-active,
+.calendar-toggle-btn.active {
+  background: var(--ca-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--ca-primary) !important;
+}
+
+.btn-action-resolved {
+  background: #ecfdf5 !important;
+  color: #065f46 !important;
+  border-color: #a7f3d0 !important;
+  font-weight: 600 !important;
+}
+
+.btn-action.btn-escalate.escalated-active {
+  background: #fef2f2 !important;
+  color: #991b1b !important;
+  border-color: #fca5a5 !important;
+  font-weight: 600 !important;
+}
+
+/* Disabled Buttons (Clear Legible Contrast) */
+.btn:disabled,
+.btn-primary:disabled,
+.settings-save-button:disabled,
+.ai-generate-submit-btn:disabled,
+.btn-danger:disabled,
+.btn-success:disabled {
+  background: #cbd5e1 !important;
+  color: #64748b !important;
+  border-color: transparent !important;
+  cursor: not-allowed !important;
+  opacity: 0.85 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.btn-secondary:disabled,
+.btn-outline:disabled,
+.btn-action:disabled {
+  background: #f1f5f9 !important;
+  color: #94a3b8 !important;
+  border-color: #e2e8f0 !important;
+  cursor: not-allowed !important;
+  opacity: 0.85 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Button Sizing */
+.btn-xs {
+  padding: 4px 8px !important;
+  font-size: 0.75rem !important;
+  border-radius: 6px !important;
+  gap: 4px !important;
+}
+
+.btn-sm {
+  padding: 6px 12px !important;
+  font-size: 0.8125rem !important;
+  border-radius: 6px !important;
+  gap: 5px !important;
+}
+
+.btn-lg {
+  padding: 12px 24px !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  border-radius: 10px !important;
+}
+
+.btn-icon-only {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  padding: 0 !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1rem !important;
+}
+
+/* Banner Error Action Button (Retry in Alerts) */
+.inbox-banner-alert .btn-secondary,
+.inbox-banner-alert .btn {
+  background: #ffffff !important;
+  color: #991b1b !important;
+  border: 1.5px solid #f87171 !important;
+  font-weight: 600 !important;
+}
+
+.inbox-banner-alert .btn-secondary:hover,
+.inbox-banner-alert .btn:hover {
+  background: #fee2e2 !important;
+  color: #7f1d1d !important;
+}
+
+/* AI CM Error Card */
+.aicm-error-card {
+  background: #ffffff;
+  border: 1px solid #fee2e2;
+  border-radius: 16px;
+  padding: 36px 28px;
+  text-align: center;
+  max-width: 480px;
+  margin: 40px auto;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.08);
+}
+
+.aicm-error-card h3 {
+  color: #991b1b;
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+}
+
+.aicm-error-card p {
+  color: #475569;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  margin: 0 0 20px 0;
+}
+
+.aicm-error-card .btn-outline {
+  background: #ffffff !important;
+  color: var(--ca-primary) !important;
+  border: 1.5px solid var(--ca-primary) !important;
+  font-weight: 600 !important;
+  padding: 8px 20px !important;
+}
+
+.aicm-error-card .btn-outline:hover {
+  background: var(--ca-primary-light) !important;
+  color: var(--ca-primary-hover) !important;
 }
 
 .btn-danger-outline {
@@ -5498,7 +5656,6 @@ select:disabled {
    Filter Bars & Pills Harmonization
    -------------------------------------------------------------------------- */
 .filters-row,
-.inbox-filters-container,
 .analytics-filters-bar {
   background: var(--ca-surface);
   border: 1px solid var(--ca-border);

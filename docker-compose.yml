@@ -73,6 +73,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend/app:/app/app
+      - ./backend/alembic:/app/alembic
       - ./backend/tests:/app/tests
       - media_data:/app/media
     depends_on:

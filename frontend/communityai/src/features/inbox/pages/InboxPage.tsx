@@ -89,10 +89,10 @@ export function InboxPage() {
             type="button"
             className="btn btn-outline"
             onClick={handleSeedMock}
-            disabled={isSeeding}
-            title="Générer des exemples d'interactions (Mode Mock)"
+            disabled={isSeeding || !isMockMode}
+            title={isMockMode ? "Générer des exemples d'interactions (Mode Mock)" : "Le mode démo est désactivé"}
           >
-            {isSeeding ? 'Génération...' : '🧪 Données démo'}
+            {isSeeding ? 'Génération...' : isMockMode ? '🧪 Données démo' : 'Démo désactivée'}
           </button>
         </div>
       </div>
